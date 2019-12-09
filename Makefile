@@ -85,7 +85,6 @@ release/deps: $(GORELEASER_BIN)
 release: release/deps
 	@echo "=== $(PROJECT) === [ release ]: Releasing new version..."
 	@$(GORELEASER_BIN) release
-	@(aws s3 sync ./target/deploy/ ${S3_BUCKET})
 	@$(MAKE) snyk/monitor
 
 release/test: release/deps

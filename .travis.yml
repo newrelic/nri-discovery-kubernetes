@@ -6,11 +6,6 @@ script:
 - make
 - npm install -g snyk
 - make snyk
-services:
-- docker
-before_deploy:
-- test -n "$TRAVIS_TAG" && docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-- pip install --user awscli==1.16.242
 deploy:
 - provider: script
   skip_cleanup: true
@@ -20,5 +15,7 @@ deploy:
     condition: "$TRAVIS_OS_NAME = linux"
 env:
   global:
-    # Snyk token
-    - secure: "H0gUcu2QSs9woFV+0xz9D2AkdEIONGeqRZ+Kts07PTYNS9SKvap48nSFaBygvU5Q2NW+9+yEtZoh4t+DN3KtnC4mEkTQZ63oDeqpafBOAyk41GQIZP8pNU3W3S++cAMRcy31k8OxAWxlHSJSwvROyjbN2lxC/r0EKMwGzkyWQQcJT446NNJ4Vpj+NS10C8iHCOGmXVQXaig+V9Crq6PC1xAV0Pfcm3cb08VMqdI3Qm9annzLklaWMIVPvvyaNoGb7WKd4croXBnOn6uvK5497Oypeer63dVaBxKVhkeaKF9KviF+5fKrC+9q+qXSMcjvHgE2tSosHKE/3F7sGhbQDqbsRYtWxyeseqlJ/H5DPJdD4csTPVJlOHuC1z0CxLFMRMzT0k22cgVzii6o2wKbS98tpXk1muNdaPtZvaHynT64VmmO5htrAHGUcHjMlRdidtnRNABhp18D4A1UsASPG+zV7KGmSNWExgTLQttseNSOyvxZ9jUAv6ys2r/9puHJbC/m/rdTjwwbx8hI1govq0WG5GwNXMyNBgiZv2GSHoK56BvXDOWDL3MyrwuiC7FIk/1jY0rhYwtGTLxeExYIdtkxpnvWn3m9QhHt3RzV1e09Hwwi1SuU3oV+/DhvsdCMcvNj6a+AyAYbujKkV/EkQz/VgSv9X+NIrzRxvsLG0eE="
+  # Snyk token
+  - secure: H0gUcu2QSs9woFV+0xz9D2AkdEIONGeqRZ+Kts07PTYNS9SKvap48nSFaBygvU5Q2NW+9+yEtZoh4t+DN3KtnC4mEkTQZ63oDeqpafBOAyk41GQIZP8pNU3W3S++cAMRcy31k8OxAWxlHSJSwvROyjbN2lxC/r0EKMwGzkyWQQcJT446NNJ4Vpj+NS10C8iHCOGmXVQXaig+V9Crq6PC1xAV0Pfcm3cb08VMqdI3Qm9annzLklaWMIVPvvyaNoGb7WKd4croXBnOn6uvK5497Oypeer63dVaBxKVhkeaKF9KviF+5fKrC+9q+qXSMcjvHgE2tSosHKE/3F7sGhbQDqbsRYtWxyeseqlJ/H5DPJdD4csTPVJlOHuC1z0CxLFMRMzT0k22cgVzii6o2wKbS98tpXk1muNdaPtZvaHynT64VmmO5htrAHGUcHjMlRdidtnRNABhp18D4A1UsASPG+zV7KGmSNWExgTLQttseNSOyvxZ9jUAv6ys2r/9puHJbC/m/rdTjwwbx8hI1govq0WG5GwNXMyNBgiZv2GSHoK56BvXDOWDL3MyrwuiC7FIk/1jY0rhYwtGTLxeExYIdtkxpnvWn3m9QhHt3RzV1e09Hwwi1SuU3oV+/DhvsdCMcvNj6a+AyAYbujKkV/EkQz/VgSv9X+NIrzRxvsLG0eE=
+  # Github token
+  - secure: FYw+O2VHLIDfK16Rf/bS2yeXSBH5ZHKEqbJiD38/KPmZ6rho17jYQy7hHJGXiahWlXnZyc5fSZ2V7NyNW0g8jBdfjM2MR3t0dC8qmE/+dh39ZK1jqoK0k5HQDIYIFk0Q4IKc/TgdYoHg2nUg48eXO3CAMPhZk20JrSHBTrrRQYy27pkQ1am1jj8S8+Lr3hIlOM1h+QV9PlQNrssJ0327K6kPC7CB6hMWzsJ1x6kp1Qxg8//EccCPYGeSdkWX+u1S6Wobc6qC7Qsw6+ZLPctnLbqdaJEx1XoEjbJhnmMwJG03ASXlfEhBFSFi4v7GBB0gDDrAD+nXo9quUjTDyx8hSA1r77VKvXtIhmfo5lzAn6InOypFsVQVK7MMvRo+PLc5CiLHUp8N1leQqjmtHrviyofJLNfmayhT7W96xFFsZDTnXoBtjI/JoiwTOVma+MEiYacvFNHa1yMEF3MghlAUo0u2K30A9LkuCBGNzwkAAXam5WwALApcTsHZtxU+hrAmjehbiA8Gk25WYnAH4N7LlnyBe/jmZ56CGOfa8H0xvkq/gaEcLd3ipi4i+4MaxaMqL8w/7w9s9inhXUiXbqkXaFzvGfnAinCW8Mnt1yUDBLUUtvrgkq5m+rqgZsJNWQ+kGo0RxAec8+EHE67RGn64GToktKCWxJIi6Hs54l2UWN8=
