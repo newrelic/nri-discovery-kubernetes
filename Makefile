@@ -41,8 +41,8 @@ deps-only:
 
 validate: deps
 	@echo "=== $(PROJECT) === [ validate ]: Validating source code running golangci-lint..."
-	@golangci-lint --version
-	@golangci-lint run
+	@${GOLANGCI_LINT_BIN} --version
+	@${GOLANGCI_LINT_BIN} run
 
 compile: deps
 	@echo "=== $(PROJECT) === [ compile ]: Building $(BINARY_NAME)..."
@@ -85,7 +85,6 @@ release/deps: $(GORELEASER_BIN)
 release: release/deps
 	@echo "=== $(PROJECT) === [ release ]: Releasing new version..."
 	@$(GORELEASER_BIN) release
-	@(aws s3 sync ./target/deploy/ ${S3_BUCKET})
 	@$(MAKE) snyk/monitor
 
 release/test: release/deps
@@ -94,10 +93,10 @@ release/test: release/deps
 
 snyk: deps-only
 	@echo "=== $(PROJECT) === [ snyk ]: Running snyk..."
-	@snyk test --docker $(IMAGE_NAME):release --file=Dockerfile.release
+	@snyk test --file=go.mod
 
 snyk/monitor: deps-only
 	@echo "=== $(PROJECT) === [ snyk/monitor ]: Running snyk..."
-	@snyk monitor --docker $(IMAGE_NAME):release --file=Dockerfile.release
+	@snyk monitor --file=go.mod
 
 .PHONY: all build clean tools tools-update deps deps-only validate compile compile-only test check-version tools-golangci-lint docker-build release release/deps release/test snyk snyk/monitor docker-release
