@@ -41,8 +41,8 @@ deps-only:
 
 validate: deps
 	@echo "=== $(PROJECT) === [ validate ]: Validating source code running golangci-lint..."
-	@golangci-lint --version
-	@golangci-lint run
+	@${GOLANGCI_LINT_BIN} --version
+	@${GOLANGCI_LINT_BIN} run
 
 compile: deps
 	@echo "=== $(PROJECT) === [ compile ]: Building $(BINARY_NAME)..."
