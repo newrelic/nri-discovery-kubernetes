@@ -1,0 +1,35 @@
+---
+apiVersion: skaffold/v1beta11
+kind: Config
+build:
+  tagPolicy:
+    sha256: {}
+  artifacts:
+    - image: newrelic/nri-discovery-kubernetes
+      context: .
+      docker:
+        dockerfile: Dockerfile
+  local:
+    push: false
+deploy:
+  kubectl:
+    manifests:
+      - deploy/minikube.yaml
+
+
+profiles:
+  - name: gcp
+    build:
+      tagPolicy:
+        sha256: {}
+      artifacts:
+        - image: gcr.io/<YOUR PROJECT NAME>/newrelic/nri-discovery-kubernetes
+          context: .
+          docker:
+            dockerfile: Dockerfile
+      local:
+        push: true
+    deploy:
+      kubectl:
+        manifests:
+          - deploy/gcp.yaml

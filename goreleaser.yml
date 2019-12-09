@@ -1,0 +1,38 @@
+---
+builds:
+  - id: nri-discovery-kubernetes
+    main: ./cmd/discovery/
+    binary: nri-discovery-kubernetes
+    ldflags:
+      - -s -w -X github.com/newrelic/nri-discovery-kubernetes/discovery/main.Version={{.Version}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - freebsd
+      - linux
+      - darwin
+    ignore:
+      - goarch: 386
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      amd64: x86_64
+checksum:
+  name_template: 'checksums.txt'
+dockers:
+  - dockerfile: Dockerfile.release
+    binaries:
+      - nri-discovery-kubernetes
+    image_templates:
+      - 'newrelic/nri-discovery-kubernetes:{{ .Major }}.{{ .Minor }}'
+      - 'newrelic/nri-discovery-kubernetes:{{ .Major }}.{{ .Minor }}.{{ .Patch }}'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
