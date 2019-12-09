@@ -1,0 +1,8 @@
+.idea
+target
+.DS_Store
+*.syso
+coverage.xml
+*.heap
+bin
+deploy/gcp.yml
