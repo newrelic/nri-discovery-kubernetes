@@ -94,10 +94,10 @@ release/test: release/deps
 
 snyk: deps-only
 	@echo "=== $(PROJECT) === [ snyk ]: Running snyk..."
-	@snyk test --docker $(IMAGE_NAME):release --file=Dockerfile.release
+	@snyk test --file=go.mod
 
 snyk/monitor: deps-only
 	@echo "=== $(PROJECT) === [ snyk/monitor ]: Running snyk..."
-	@snyk monitor --docker $(IMAGE_NAME):release --file=Dockerfile.release
+	@snyk monitor --file=go.mod
 
 .PHONY: all build clean tools tools-update deps deps-only validate compile compile-only test check-version tools-golangci-lint docker-build release release/deps release/test snyk snyk/monitor docker-release
