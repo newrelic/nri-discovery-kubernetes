@@ -2,7 +2,6 @@ package discovery
 
 import (
 	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
-	"github.com/newrelic/nri-discovery-kubernetes/internal/naming"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
 	"strings"
 )
@@ -51,20 +50,20 @@ func processContainers(containers []kubernetes.ContainerInfo) Output {
 		// new map for each container
 		var discoveredProperties = make(map[string]string)
 
-		discoveredProperties[naming.Namespace] = c.Namespace
-		discoveredProperties[naming.PodName] = c.PodName
-		discoveredProperties[naming.IP] = c.PodIP
-		discoveredProperties[naming.Cluster] = c.Cluster
+		discoveredProperties[namespace] = c.Namespace
+		discoveredProperties[podName] = c.PodName
+		discoveredProperties[ip] = c.PodIP
+		discoveredProperties[cluster] = c.Cluster
 		// although labels are set in the pods, we "apply" them to containers
 		for k, v := range c.PodLabels {
-			discoveredProperties[naming.LabelPrefix+k] = v
+			discoveredProperties[labelPrefix+k] = v
 		}
-		discoveredProperties[naming.Id] = c.ID
-		discoveredProperties[naming.Name] = c.Name
-		discoveredProperties[naming.Image] = c.Image
+		discoveredProperties[id] = c.ID
+		discoveredProperties[name] = c.Name
+		discoveredProperties[image] = c.Image
 		// although annotation are set in the pods, we "apply" them to containers
 		for k, v := range c.PodAnnotations {
-			discoveredProperties[naming.AnnotationPrefix+k] = v
+			discoveredProperties[annotationPrefix+k] = v
 		}
 		//remove from discovered properties, k8s annotations
 		metricAnnotations := filterAnnotations(discoveredProperties)
@@ -83,21 +82,21 @@ func processContainers(containers []kubernetes.ContainerInfo) Output {
 func getReplacements() []Replacement {
 	return []Replacement{
 		{
-			Action:       "replace",
-			Match:        naming.IP,
-			ReplaceField: naming.Name,
+			Action:       entityRewriteActionReplace,
+			Match:        ip,
+			ReplaceField: name,
 		},
 	}
 }
 
 var annotationExclusions = []string{
-	naming.Id, naming.IP,
+	id, ip,
 }
 
 func filterAnnotations(props map[string]string) map[string]string {
 	filtered := make(map[string]string)
 	for k, v := range props {
-		if strings.HasPrefix(k, naming.AnnotationPrefix) {
+		if strings.HasPrefix(k, annotationPrefix) {
 			continue
 		}
 
