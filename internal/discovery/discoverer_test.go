@@ -170,8 +170,8 @@ func items() map[string]DiscoveredItem {
 			EntityRewrites: []Replacement{
 				{
 					Action:       "replace",
-					Match:        ip,
-					ReplaceField: name,
+					Match:        "${ip}",
+					ReplaceField: "k8s:${clusterName}:${namespace}:pod:${podName}:${name}",
 				},
 			},
 		},
@@ -198,8 +198,8 @@ func items() map[string]DiscoveredItem {
 			EntityRewrites: []Replacement{
 				{
 					Action:       "replace",
-					Match:        ip,
-					ReplaceField: name,
+					Match:        "${ip}",
+					ReplaceField: "k8s:${clusterName}:${namespace}:pod:${podName}:${name}",
 				},
 			},
 		},

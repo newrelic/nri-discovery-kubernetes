@@ -16,4 +16,6 @@ const (
 	ip               Property = "ip"
 
 	entityRewriteActionReplace Property = "replace"
+	entityRewriteMatch         Property = "${ip}"
+	entityReplaceField         Property = "k8s:${clusterName}:${namespace}:pod:${podName}:${name}"
 )

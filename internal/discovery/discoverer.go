@@ -83,8 +83,8 @@ func getReplacements() []Replacement {
 	return []Replacement{
 		{
 			Action:       entityRewriteActionReplace,
-			Match:        ip,
-			ReplaceField: name,
+			Match:        entityRewriteMatch,
+			ReplaceField: entityReplaceField,
 		},
 	}
 }
