@@ -7,7 +7,6 @@ import (
 
 	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
-	"github.com/newrelic/nri-discovery-kubernetes/internal/naming"
 	v1 "k8s.io/api/core/v1"
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -150,57 +149,57 @@ func items() map[string]DiscoveredItem {
 	items := map[string]DiscoveredItem{
 		"test": {
 			Variables: map[string]string{
-				naming.Cluster:                   "",
-				naming.Namespace:                 "test",
-				naming.PodName:                   "test",
-				naming.IP:                        "127.0.0.1",
-				naming.Name:                      "test",
-				naming.Id:                        "testID",
-				naming.Image:                     "testImage",
-				naming.LabelPrefix + "team":      "caos",
-				naming.AnnotationPrefix + "test": "test",
+				cluster:                   "",
+				namespace:                 "test",
+				podName:                   "test",
+				ip:                        "127.0.0.1",
+				name:                      "test",
+				id:                        "testID",
+				image:                     "testImage",
+				labelPrefix + "team":      "caos",
+				annotationPrefix + "test": "test",
 			},
 			MetricAnnotations: map[string]string{
-				naming.Cluster:              "",
-				naming.Namespace:            "test",
-				naming.PodName:              "test",
-				naming.Name:                 "test",
-				naming.Image:                "testImage",
-				naming.LabelPrefix + "team": "caos",
+				cluster:              "",
+				namespace:            "test",
+				podName:              "test",
+				name:                 "test",
+				image:                "testImage",
+				labelPrefix + "team": "caos",
 			},
 			EntityRewrites: []Replacement{
 				{
 					Action:       "replace",
-					Match:        naming.IP,
-					ReplaceField: naming.Name,
+					Match:        "${ip}",
+					ReplaceField: "k8s:${clusterName}:${namespace}:pod:${podName}:${name}",
 				},
 			},
 		},
 		"fake": {
 			Variables: map[string]string{
-				naming.Cluster:                   "",
-				naming.Namespace:                 "fake",
-				naming.PodName:                   "fake",
-				naming.IP:                        "127.0.0.2",
-				naming.Name:                      "fake",
-				naming.Id:                        "fakeID",
-				naming.Image:                     "fakeImage",
-				naming.LabelPrefix + "team":      "caos",
-				naming.AnnotationPrefix + "fake": "fake",
+				cluster:                   "",
+				namespace:                 "fake",
+				podName:                   "fake",
+				ip:                        "127.0.0.2",
+				name:                      "fake",
+				id:                        "fakeID",
+				image:                     "fakeImage",
+				labelPrefix + "team":      "caos",
+				annotationPrefix + "fake": "fake",
 			},
 			MetricAnnotations: map[string]string{
-				naming.Cluster:              "",
-				naming.Namespace:            "fake",
-				naming.PodName:              "fake",
-				naming.Name:                 "fake",
-				naming.Image:                "fakeImage",
-				naming.LabelPrefix + "team": "caos",
+				cluster:              "",
+				namespace:            "fake",
+				podName:              "fake",
+				name:                 "fake",
+				image:                "fakeImage",
+				labelPrefix + "team": "caos",
 			},
 			EntityRewrites: []Replacement{
 				{
 					Action:       "replace",
-					Match:        naming.IP,
-					ReplaceField: naming.Name,
+					Match:        "${ip}",
+					ReplaceField: "k8s:${clusterName}:${namespace}:pod:${podName}:${name}",
 				},
 			},
 		},

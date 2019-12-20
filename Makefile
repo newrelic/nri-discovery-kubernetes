@@ -30,6 +30,9 @@ $(GOLANGCI_LINT_BIN):
 
 tools-golangci-lint: $(GOLANGCI_LINT_BIN)
 
+fmt:
+	@go fmt ./...
+
 bin:
 	@mkdir -p bin
 
@@ -99,4 +102,4 @@ snyk/monitor: deps-only
 	@echo "=== $(PROJECT) === [ snyk/monitor ]: Running snyk..."
 	@snyk monitor --file=go.mod
 
-.PHONY: all build clean tools tools-update deps deps-only validate compile compile-only test check-version tools-golangci-lint docker-build release release/deps release/test snyk snyk/monitor docker-release
+.PHONY: all fmt build clean tools tools-update deps deps-only validate compile compile-only test check-version tools-golangci-lint docker-build release release/deps release/test snyk snyk/monitor docker-release
