@@ -17,7 +17,8 @@ type httpClient struct {
 }
 
 func (c *httpClient) Get(path string) ([]byte, error) {
-	req, _ := http.NewRequest(http.MethodGet, c.url.String()+path, nil)
+	url := c.url.String() + path
+	req, _ := http.NewRequest(http.MethodGet, url, nil)
 	req.Header.Add("Authorization", "Bearer "+c.token)
 	resp, err := c.http.Do(req)
 	if err != nil {

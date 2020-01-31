@@ -18,6 +18,7 @@ import (
 const host = "localhost"
 const podsPath = "/pods"
 const clusterNameEnvVar = "CLUSTER_NAME"
+const kubeletHostEnvVar = "NRK8S_NODE_NAME"
 
 type ContainerInfo struct {
 	Name           string
@@ -109,13 +110,10 @@ func getContainers(clusterName string, nodeName string, pods []v1.Pod) []Contain
 	return containers
 }
 
-func getNodeAndClusterName() (string, string) {
-	// per docs, hostname should be the node name
-	// https://kubernetes.io/docs/concepts/containers/container-environment-variables/#container-information
-	nodeName := utils.Hostname()
-	// there is no way at the moment to get the cluster from the API
+func getClusterName() string {
+	// there is no way at the moment to get the cluster name from the Kubelet API
 	clusterName := os.Getenv(clusterNameEnvVar)
-	return clusterName, nodeName
+	return clusterName
 }
 
 func NewKubelet(port int, insecure bool) (Kubelet, error) {
@@ -129,13 +127,21 @@ func NewKubelet(port int, insecure bool) (Kubelet, error) {
 		}
 	}
 
-	clusterName, nodeName := getNodeAndClusterName()
-	hostUrl := makeUrl(port, insecure)
+	clusterName := getClusterName()
+	kubeletHost, isKubeletHostSet := os.LookupEnv(kubeletHostEnvVar)
+
+	if !isKubeletHostSet {
+		// If the environment variable represented by kubeletHostEnvVar is not set,
+		// fallback to the default value.
+		kubeletHost = host
+	}
+
+	hostUrl := makeUrl(kubeletHost, port, insecure)
 	httpClient := http.NewClient(hostUrl, config.BearerToken)
 
 	kubelet := &kubelet{
 		client:      &httpClient,
-		NodeName:    nodeName,
+		NodeName:    kubeletHost,
 		ClusterName: clusterName,
 	}
 
@@ -150,7 +156,7 @@ func NewKubeletWithClient(httpClient *http.HttpClient) (Kubelet, error) {
 	return k, nil
 }
 
-func makeUrl(port int, insecure bool) url.URL {
+func makeUrl(host string, port int, insecure bool) url.URL {
 	scheme := "https"
 	if insecure {
 		scheme = "http"

@@ -35,10 +35,15 @@ To build the project run: `make build`. This will output the binary release at `
 In case you wish to push your own version of the image to a Docker registry, you can build it with:
 
 ```bash
-IMAGE_NAME=<YOUR_IMAGE_NAME> `make docker-build`
+`docker build . -t <YOUR_IMAGE_NAME>`
 ```
+or 
+```bash
+`docker build . -f Dockerfile.release -t <YOUR_IMAGE_NAME>`
+```
+to build the image only, after build the executable.
 
-And push it later with `docker push`
+And push it later with `docker push <YOUR_IMAGE_NAME>`
 
 ### Executing the discovery in a development cluster
 
