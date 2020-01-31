@@ -1,8 +1,6 @@
-FROM alpine:3.9
+FROM alpine:3.11
 
-RUN apk add --no-cache --upgrade \
-        ca-certificates \
-        musl=1.1.20-r4
+RUN apk add --no-cache --upgrade ca-certificates
 
 USER nobody
 COPY nri-discovery-kubernetes /bin/nri-discovery-kubernetes
