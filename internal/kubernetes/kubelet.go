@@ -129,14 +129,14 @@ func NewKubelet(port int, insecure bool) (Kubelet, error) {
 
 	clusterName := getClusterName()
 	kubeletHost, isKubeletHostSet := os.LookupEnv(kubeletHostEnvVar)
-    
-    if !isKubeletHostSet {
-	    // If the environment variable represented by kubeletHostEnvVar is not set,
-        // fallback to the default value.
-        kubeletHost = host
-    }
-    
-    hostUrl := makeUrl(kubeletHost, port, insecure)
+
+	if !isKubeletHostSet {
+		// If the environment variable represented by kubeletHostEnvVar is not set,
+		// fallback to the default value.
+		kubeletHost = host
+	}
+
+	hostUrl := makeUrl(kubeletHost, port, insecure)
 	httpClient := http.NewClient(hostUrl, config.BearerToken)
 
 	kubelet := &kubelet{
@@ -163,7 +163,7 @@ func makeUrl(host string, port int, insecure bool) url.URL {
 	}
 	kubeletUrl := url.URL{
 		Scheme: scheme,
-		Host: host + ":" + strconv.Itoa(port),
+		Host:   host + ":" + strconv.Itoa(port),
 	}
 	return kubeletUrl
 }
