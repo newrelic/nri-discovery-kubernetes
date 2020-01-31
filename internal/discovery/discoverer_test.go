@@ -79,6 +79,7 @@ func fakeKubelet() kubernetes.Kubelet {
 		Spec: v1.PodSpec{},
 		Status: v1.PodStatus{
 			PodIP: "127.0.0.1",
+			HostIP: "10.0.0.0",
 			ContainerStatuses: []v1.ContainerStatus{
 				{
 					Name: "test",
@@ -108,6 +109,7 @@ func fakeKubelet() kubernetes.Kubelet {
 		Spec: v1.PodSpec{},
 		Status: v1.PodStatus{
 			PodIP: "127.0.0.2",
+			HostIP: "10.0.0.0",
 			ContainerStatuses: []v1.ContainerStatus{
 				{
 					Name: "fake",
@@ -150,6 +152,8 @@ func items() map[string]DiscoveredItem {
 		"test": {
 			Variables: map[string]string{
 				cluster:                   "",
+				node:                      "",
+				nodeIP:                    "10.0.0.0",
 				namespace:                 "test",
 				podName:                   "test",
 				ip:                        "127.0.0.1",
@@ -161,6 +165,7 @@ func items() map[string]DiscoveredItem {
 			},
 			MetricAnnotations: map[string]string{
 				cluster:              "",
+				node:				  "",
 				namespace:            "test",
 				podName:              "test",
 				name:                 "test",
@@ -178,6 +183,8 @@ func items() map[string]DiscoveredItem {
 		"fake": {
 			Variables: map[string]string{
 				cluster:                   "",
+				node:                      "",
+				nodeIP:                    "10.0.0.0",
 				namespace:                 "fake",
 				podName:                   "fake",
 				ip:                        "127.0.0.2",
@@ -189,6 +196,7 @@ func items() map[string]DiscoveredItem {
 			},
 			MetricAnnotations: map[string]string{
 				cluster:              "",
+				node:                 "",
 				namespace:            "fake",
 				podName:              "fake",
 				name:                 "fake",

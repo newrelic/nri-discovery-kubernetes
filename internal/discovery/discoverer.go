@@ -54,6 +54,8 @@ func processContainers(containers []kubernetes.ContainerInfo) Output {
 		discoveredProperties[podName] = c.PodName
 		discoveredProperties[ip] = c.PodIP
 		discoveredProperties[cluster] = c.Cluster
+		discoveredProperties[node] = c.NodeName
+		discoveredProperties[nodeIP] = c.NodeIP
 		// although labels are set in the pods, we "apply" them to containers
 		for k, v := range c.PodLabels {
 			discoveredProperties[labelPrefix+k] = v
@@ -90,7 +92,7 @@ func getReplacements() []Replacement {
 }
 
 var annotationExclusions = []string{
-	id, ip,
+	id, ip, nodeIP,
 }
 
 func filterAnnotations(props map[string]string) map[string]string {

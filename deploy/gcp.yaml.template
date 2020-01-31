@@ -139,4 +139,9 @@ spec:
           env:
             - name: CLUSTER_NAME
               value: <YOUR CLUSTER NAME>
+            - name: "NRK8S_NODE_NAME"
+              valueFrom:
+                fieldRef:
+                  apiVersion: "v1"
+                  fieldPath: "spec.nodeName"
 ---
