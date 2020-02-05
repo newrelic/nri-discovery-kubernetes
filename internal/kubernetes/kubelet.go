@@ -20,14 +20,18 @@ const podsPath = "/pods"
 const clusterNameEnvVar = "CLUSTER_NAME"
 const kubeletHostEnvVar = "NRK8S_NODE_NAME"
 
+type PortsMap map[string]int32
+type LabelsMap map[string]string
+type AnnotationsMap map[string]string
+
 type ContainerInfo struct {
 	Name           string
 	ID             string
 	Image          string
 	ImageID        string
-	Ports          map[string]int32
-	PodLabels      map[string]string
-	PodAnnotations map[string]string
+	Ports          PortsMap
+	PodLabels      LabelsMap
+	PodAnnotations AnnotationsMap
 	PodIP          string
 	PodName        string
 	NodeName       string
@@ -90,18 +94,7 @@ func getContainers(clusterName string, nodeName string, pods []v1.Pod) []Contain
 	for _, pod := range pods {
 		for idx, cs := range pod.Status.ContainerStatuses {
 			if cs.State.Running != nil || cs.State.Waiting != nil {
-				// we cant get the ports from the pod directly, so get them from the spec
-				ports := make(map[string]int32)
-				if len(pod.Spec.Containers) > 0 && len(pod.Spec.Containers[idx].Ports) > 0 {
-					// we add the index and if available the name.
-					// you can then use either to refer to the value
-					for portIndex, port := range pod.Spec.Containers[idx].Ports {
-						ports[strconv.Itoa(portIndex)] = port.ContainerPort
-						if len(port.Name) > 0 {
-							ports[port.Name] = port.ContainerPort
-						}
-					}
-				}
+				ports := getPorts(pod, idx)
 				c := ContainerInfo{
 					Name:           cs.Name,
 					ID:             cs.ContainerID,
@@ -122,6 +115,22 @@ func getContainers(clusterName string, nodeName string, pods []v1.Pod) []Contain
 		}
 	}
 	return containers
+}
+
+func getPorts(pod v1.Pod, containerIndex int) PortsMap {
+	ports := make(PortsMap)
+	if len(pod.Spec.Containers) > 0 &&
+		len(pod.Spec.Containers[containerIndex].Ports) > 0 {
+		// we add the port index and if available the name.
+		// you can then use either to refer to the value
+		for portIndex, port := range pod.Spec.Containers[containerIndex].Ports {
+			ports[strconv.Itoa(portIndex)] = port.ContainerPort
+			if len(port.Name) > 0 {
+				ports[port.Name] = port.ContainerPort
+			}
+		}
+	}
+	return ports
 }
 
 func getClusterName() string {

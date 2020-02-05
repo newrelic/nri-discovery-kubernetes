@@ -2,7 +2,7 @@ package discovery
 
 import (
 	"encoding/json"
-	"reflect"
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
@@ -51,15 +51,37 @@ func TestDiscoverer_Run(t *testing.T) {
 				t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Run() got = %v, want %v", got, tt.want)
-			}
+			assert.EqualValues(t, got, tt.want)
 		})
 	}
 }
 
-func noItem() Output {
-	return Output{}
+func Test_PodsWithMultiplePorts_ReturnsIndexAndName(t *testing.T) {
+	d := &Discoverer{
+		namespaces: []string{"test"},
+		kubelet:    fakeKubelet(),
+	}
+	result, err := d.Run()
+	assert.NoError(t, err)
+
+	assert.Len(t, result, 1)
+	assert.NotEmpty(t, result[0].Variables)
+	assert.Contains(t, result[0].Variables, ports)
+
+	// assert correct type
+	p := result[0].Variables[ports].(kubernetes.PortsMap)
+	assert.NotEmpty(t, p)
+
+	assert.Contains(t, p, "0")
+	assert.Contains(t, p, "first")
+	assert.EqualValues(t, p["0"], p["first"])
+
+	assert.Contains(t, p, "1")
+
+	assert.Contains(t, p, "2")
+	assert.Contains(t, p, "third")
+	assert.EqualValues(t, p["2"], p["third"])
+
 }
 
 func fakeKubelet() kubernetes.Kubelet {
@@ -178,21 +200,21 @@ func (k *FakeHttpClient) Get(path string) ([]byte, error) {
 func items() map[string]DiscoveredItem {
 	items := map[string]DiscoveredItem{
 		"test": {
-			Variables: map[string]interface{}{
+			Variables: VariablesMap{
 				cluster:                   "",
 				node:                      "",
 				nodeIP:                    "10.0.0.0",
 				namespace:                 "test",
 				podName:                   "test",
 				ip:                        "127.0.0.1",
-				ports:                     map[string]int32{"0": 1, "1": 2, "2": 3, "first": 1, "third": 3},
+				ports:                     kubernetes.PortsMap{"0": 1, "1": 2, "2": 3, "first": 1, "third": 3},
 				name:                      "test",
 				id:                        "testID",
 				image:                     "testImage",
 				labelPrefix + "team":      "caos",
 				annotationPrefix + "test": "test",
 			},
-			MetricAnnotations: map[string]interface{}{
+			MetricAnnotations: AnnotationsMap{
 				cluster:              "",
 				node:                 "",
 				namespace:            "test",
@@ -210,21 +232,21 @@ func items() map[string]DiscoveredItem {
 			},
 		},
 		"fake": {
-			Variables: map[string]interface{}{
+			Variables: VariablesMap{
 				cluster:                   "",
 				node:                      "",
 				nodeIP:                    "10.0.0.0",
 				namespace:                 "fake",
 				podName:                   "fake",
 				ip:                        "127.0.0.2",
-				ports:                     map[string]int32{"0": 1},
+				ports:                     kubernetes.PortsMap{"0": 1},
 				name:                      "fake",
 				id:                        "fakeID",
 				image:                     "fakeImage",
 				labelPrefix + "team":      "caos",
 				annotationPrefix + "fake": "fake",
 			},
-			MetricAnnotations: map[string]interface{}{
+			MetricAnnotations: AnnotationsMap{
 				cluster:              "",
 				node:                 "",
 				namespace:            "fake",
@@ -266,4 +288,8 @@ func singleItem(ns string) Output {
 		item,
 	}
 	return output
+}
+
+func noItem() Output {
+	return Output{}
 }

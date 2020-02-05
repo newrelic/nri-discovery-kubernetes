@@ -13,11 +13,14 @@ type Replacement struct {
 	ReplaceField string `json:"replaceField"`
 }
 
+type VariablesMap map[string]interface{}
+type AnnotationsMap = VariablesMap
+
 // DiscoveredItem defines the structure of a single item that has been "discovered"
 type DiscoveredItem struct {
-	Variables         map[string]interface{} `json:"variables"`
-	MetricAnnotations map[string]interface{} `json:"metricAnnotations"`
-	EntityRewrites    []Replacement          `json:"entityRewrites"`
+	Variables         VariablesMap   `json:"variables"`
+	MetricAnnotations AnnotationsMap `json:"metricAnnotations"`
+	EntityRewrites    []Replacement  `json:"entityRewrites"`
 }
 
 // Output defines the final output of the discovery executable
@@ -48,7 +51,7 @@ func processContainers(containers []kubernetes.ContainerInfo) Output {
 	output := Output{}
 	for _, c := range containers {
 		// new map for each container
-		var discoveredProperties = make(map[string]interface{})
+		var discoveredProperties = make(VariablesMap)
 
 		discoveredProperties[namespace] = c.Namespace
 		discoveredProperties[podName] = c.PodName
@@ -96,7 +99,7 @@ var annotationExclusions = []string{
 	id, ip, nodeIP, ports,
 }
 
-func filterAnnotations(props map[string]interface{}) map[string]interface{} {
+func filterAnnotations(props VariablesMap) AnnotationsMap {
 	filtered := make(map[string]interface{})
 	for k, v := range props {
 		if strings.HasPrefix(k, annotationPrefix) {
