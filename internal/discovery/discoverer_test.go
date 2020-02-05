@@ -76,7 +76,25 @@ func fakeKubelet() kubernetes.Kubelet {
 				"test": "test",
 			},
 		},
-		Spec: v1.PodSpec{},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Ports: []v1.ContainerPort{
+						{
+							Name:          "first",
+							ContainerPort: 1,
+						},
+						{
+							ContainerPort: 2,
+						},
+						{
+							Name:          "third",
+							ContainerPort: 3,
+						},
+					},
+				},
+			},
+		},
 		Status: v1.PodStatus{
 			PodIP:  "127.0.0.1",
 			HostIP: "10.0.0.0",
@@ -106,7 +124,17 @@ func fakeKubelet() kubernetes.Kubelet {
 				"fake": "fake",
 			},
 		},
-		Spec: v1.PodSpec{},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Ports: []v1.ContainerPort{
+						{
+							ContainerPort: 1,
+						},
+					},
+				},
+			},
+		},
 		Status: v1.PodStatus{
 			PodIP:  "127.0.0.2",
 			HostIP: "10.0.0.0",
@@ -150,20 +178,21 @@ func (k *FakeHttpClient) Get(path string) ([]byte, error) {
 func items() map[string]DiscoveredItem {
 	items := map[string]DiscoveredItem{
 		"test": {
-			Variables: map[string]string{
+			Variables: map[string]interface{}{
 				cluster:                   "",
 				node:                      "",
 				nodeIP:                    "10.0.0.0",
 				namespace:                 "test",
 				podName:                   "test",
 				ip:                        "127.0.0.1",
+				ports:                     map[string]int32{"0": 1, "1": 2, "2": 3, "first": 1, "third": 3},
 				name:                      "test",
 				id:                        "testID",
 				image:                     "testImage",
 				labelPrefix + "team":      "caos",
 				annotationPrefix + "test": "test",
 			},
-			MetricAnnotations: map[string]string{
+			MetricAnnotations: map[string]interface{}{
 				cluster:              "",
 				node:                 "",
 				namespace:            "test",
@@ -181,20 +210,21 @@ func items() map[string]DiscoveredItem {
 			},
 		},
 		"fake": {
-			Variables: map[string]string{
+			Variables: map[string]interface{}{
 				cluster:                   "",
 				node:                      "",
 				nodeIP:                    "10.0.0.0",
 				namespace:                 "fake",
 				podName:                   "fake",
 				ip:                        "127.0.0.2",
+				ports:                     map[string]int32{"0": 1},
 				name:                      "fake",
 				id:                        "fakeID",
 				image:                     "fakeImage",
 				labelPrefix + "team":      "caos",
 				annotationPrefix + "fake": "fake",
 			},
-			MetricAnnotations: map[string]string{
+			MetricAnnotations: map[string]interface{}{
 				cluster:              "",
 				node:                 "",
 				namespace:            "fake",

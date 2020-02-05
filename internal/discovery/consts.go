@@ -14,6 +14,7 @@ const (
 	name             Property = "name"
 	id               Property = "id"
 	ip               Property = "ip"
+	ports            Property = "ports"
 
 	entityRewriteActionReplace Property = "replace"
 	entityRewriteMatch         Property = "${ip}"

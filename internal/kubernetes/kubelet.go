@@ -25,6 +25,7 @@ type ContainerInfo struct {
 	ID             string
 	Image          string
 	ImageID        string
+	Ports          map[string]int32
 	PodLabels      map[string]string
 	PodAnnotations map[string]string
 	PodIP          string
@@ -87,13 +88,26 @@ func getContainers(clusterName string, nodeName string, pods []v1.Pod) []Contain
 	var containers []ContainerInfo
 
 	for _, pod := range pods {
-		for _, cs := range pod.Status.ContainerStatuses {
+		for idx, cs := range pod.Status.ContainerStatuses {
 			if cs.State.Running != nil || cs.State.Waiting != nil {
+				// we cant get the ports from the pod directly, so get them from the spec
+				ports := make(map[string]int32)
+				if len(pod.Spec.Containers) > 0 && len(pod.Spec.Containers[idx].Ports) > 0 {
+					// we add the index and if available the name.
+					// you can then use either to refer to the value
+					for portIndex, port := range pod.Spec.Containers[idx].Ports {
+						ports[strconv.Itoa(portIndex)] = port.ContainerPort
+						if len(port.Name) > 0 {
+							ports[port.Name] = port.ContainerPort
+						}
+					}
+				}
 				c := ContainerInfo{
 					Name:           cs.Name,
 					ID:             cs.ContainerID,
 					Image:          cs.Image,
 					ImageID:        cs.ImageID,
+					Ports:          ports,
 					PodIP:          pod.Status.PodIP,
 					PodLabels:      pod.Labels,
 					PodAnnotations: pod.Annotations,
