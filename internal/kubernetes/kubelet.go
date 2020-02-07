@@ -20,13 +20,18 @@ const podsPath = "/pods"
 const clusterNameEnvVar = "CLUSTER_NAME"
 const kubeletHostEnvVar = "NRK8S_NODE_NAME"
 
+type PortsMap map[string]int32
+type LabelsMap map[string]string
+type AnnotationsMap map[string]string
+
 type ContainerInfo struct {
 	Name           string
 	ID             string
 	Image          string
 	ImageID        string
-	PodLabels      map[string]string
-	PodAnnotations map[string]string
+	Ports          PortsMap
+	PodLabels      LabelsMap
+	PodAnnotations AnnotationsMap
 	PodIP          string
 	PodName        string
 	NodeName       string
@@ -87,13 +92,15 @@ func getContainers(clusterName string, nodeName string, pods []v1.Pod) []Contain
 	var containers []ContainerInfo
 
 	for _, pod := range pods {
-		for _, cs := range pod.Status.ContainerStatuses {
+		for idx, cs := range pod.Status.ContainerStatuses {
 			if cs.State.Running != nil || cs.State.Waiting != nil {
+				ports := getPorts(pod, idx)
 				c := ContainerInfo{
 					Name:           cs.Name,
 					ID:             cs.ContainerID,
 					Image:          cs.Image,
 					ImageID:        cs.ImageID,
+					Ports:          ports,
 					PodIP:          pod.Status.PodIP,
 					PodLabels:      pod.Labels,
 					PodAnnotations: pod.Annotations,
@@ -108,6 +115,22 @@ func getContainers(clusterName string, nodeName string, pods []v1.Pod) []Contain
 		}
 	}
 	return containers
+}
+
+func getPorts(pod v1.Pod, containerIndex int) PortsMap {
+	ports := make(PortsMap)
+	if len(pod.Spec.Containers) > 0 &&
+		len(pod.Spec.Containers[containerIndex].Ports) > 0 {
+		// we add the port index and if available the name.
+		// you can then use either to refer to the value
+		for portIndex, port := range pod.Spec.Containers[containerIndex].Ports {
+			ports[strconv.Itoa(portIndex)] = port.ContainerPort
+			if len(port.Name) > 0 {
+				ports[port.Name] = port.ContainerPort
+			}
+		}
+	}
+	return ports
 }
 
 func getClusterName() string {
