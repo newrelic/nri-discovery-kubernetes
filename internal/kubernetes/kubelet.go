@@ -139,7 +139,7 @@ func getClusterName() string {
 	return clusterName
 }
 
-func NewKubelet(port int, insecure bool) (Kubelet, error) {
+func NewKubelet(port int, useSSL bool) (Kubelet, error) {
 	config, err := rest.InClusterConfig()
 	// not inside the cluster?
 	if err != nil {
@@ -159,7 +159,7 @@ func NewKubelet(port int, insecure bool) (Kubelet, error) {
 		kubeletHost = host
 	}
 
-	hostUrl := makeUrl(kubeletHost, port, insecure)
+	hostUrl := makeUrl(kubeletHost, port, useSSL)
 	httpClient := http.NewClient(hostUrl, config.BearerToken)
 
 	kubelet := &kubelet{
@@ -179,10 +179,10 @@ func NewKubeletWithClient(httpClient *http.HttpClient) (Kubelet, error) {
 	return k, nil
 }
 
-func makeUrl(host string, port int, insecure bool) url.URL {
-	scheme := "https"
-	if insecure {
-		scheme = "http"
+func makeUrl(host string, port int, useSSL bool) url.URL {
+	scheme := "http"
+	if useSSL {
+		scheme = "https"
 	}
 	kubeletUrl := url.URL{
 		Scheme: scheme,
