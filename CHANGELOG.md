@@ -7,8 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## 1.1.0
 ### Changed
-   - Optional `insecure` flag has been deprecated in favor of `ssl`
-     SSL  connections are now disabled by default. If you want to use SSL, use `ssl` flag (or set `insecure` to false)
+   - Optional `insecure` flag has been deprecated in favor of `tls`
+     TLS connections are now disabled by default. If you want to use SSL, use `tls` flag (or set `insecure` to false)
 - Optional `port` flag default value has been changed to `10255`
 
 ## 1.0.1
