@@ -2,6 +2,7 @@ package http
 
 import (
 	"crypto/tls"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -17,12 +18,16 @@ type httpClient struct {
 }
 
 func (c *httpClient) Get(path string) ([]byte, error) {
-	url := c.url.String() + path
-	req, _ := http.NewRequest(http.MethodGet, url, nil)
+	endpoint := c.url.String() + path
+	req, _ := http.NewRequest(http.MethodGet, endpoint, nil)
 	req.Header.Add("Authorization", "Bearer "+c.token)
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(resp.Status)
 	}
 
 	buff, _ := ioutil.ReadAll(resp.Body)
