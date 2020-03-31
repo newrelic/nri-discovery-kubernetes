@@ -20,7 +20,7 @@ func main() {
 
 	config := cfg.NewConfig(Version)
 
-	kubelet, err := kubernetes.NewKubelet(config.Port, config.Insecure)
+	kubelet, err := kubernetes.NewKubelet(config.Port, config.TLS)
 	if err != nil {
 		log.Printf("failed to get Kubernetes configuration: %s", err)
 		os.Exit(1)

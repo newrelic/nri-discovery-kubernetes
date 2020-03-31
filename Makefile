@@ -6,11 +6,11 @@ PROJECT      := nri-discovery-kubernetes
 BINARY_NAME   = $(PROJECT)
 IMAGE_NAME   ?= newrelic/nri-discovery-kubernetes
 GOPATH := $(shell go env GOPATH)
-GOLANGCI_LINT_BIN = bin/golangci-lint
-GORELEASER_VERSION := v0.123.3
-GORELEASER_SHA256 := cad997014e5c6a462488757087db4145c2ae7d7d73a29cb62bbfd41f18ccea30
+GORELEASER_VERSION := v0.129.0
+GORELEASER_SHA256 := e9e61de6565ad4acbe33a944abbeaf0d75582c10b89b793c99acd41a0846c166
 GORELEASER_BIN ?= bin/goreleaser
-GOLANGCILINT_VERSION = v1.21.0
+GOLANGCILINT_VERSION = v1.24.0
+GOLANGCI_LINT_BIN = bin/golangci-lint
 
 all: build
 
@@ -62,17 +62,17 @@ test: deps
 test/skaffold:
 	@skaffold dev -f ./deploy/skaffold.yaml
 
-test/skaffold-gcp:
+test/skaffold/gcp:
 	@skaffold dev -f ./deploy/skaffold.yaml -p gcp
 
 check-version:
 ifdef GOOS
-ifneq "$(GOOS)" "$(NATIVEOS)"
+ifneq ("$(GOOS)" "$(NATIVEOS)")
 	$(error GOOS is not $(NATIVEOS). Cross-compiling is only allowed for 'clean', 'deps-only' and 'compile-only' targets)
 endif
 endif
 ifdef GOARCH
-ifneq "$(GOARCH)" "$(NATIVEARCH)"
+ifneq ("$(GOARCH)" "$(NATIVEARCH)")
 	$(error GOARCH variable is not $(NATIVEARCH). Cross-compiling is only allowed for 'clean', 'deps-only' and 'compile-only' targets)
 endif
 endif

@@ -16,8 +16,10 @@ However, at the moment the tests are totally isolated and you don't need a clust
 
 ### Prerequisites
 
-1. **Go 1.11**. This project uses the [go modules](https://github.com/golang/go/wiki/Modules) support, which makes
-   it incompatible with previous Go versions. If using **Go 1.11** set **GO111MODULE=on**.
+1. **Go 1.13**. This project uses the [go modules](https://github.com/golang/go/wiki/Modules) support, which makes
+   it incompatible with previous Go versions. 
+   
+   It can work with **Go 1.11** but you will need to set **GO111MODULE=on**.
 2. Ensure you added `$GOPATH/bin` to your `$PATH`, otherwise builds won't be possible.
 
 If you want to learn more about the GOPATH, check the [official Go docs](https://golang.org/doc/code.html#GOPATH).
@@ -55,4 +57,4 @@ You can execute the discovery in a local development cluster (example minikube) 
 
 - To deploy into a GCP K8s cluster, Copy `deploy/skaffold.yaml.template` to `deploy/skaffold.yaml` 
  and `deploy/gcp.yaml.template` to `deploy/gcp.yaml` and replace the placeholders.
-Once you have it configured, deploy it in your Kubernetes cluster with `make test/skaffold-gcp`
+Once you have it configured, deploy it in your Kubernetes cluster with `make test/skaffold/gcp`
