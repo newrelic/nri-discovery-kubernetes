@@ -128,7 +128,7 @@ spec:
           # uncomment below to configure discovery execution
           # args:
           #  - "--port=10250"
-          #  - "insecure"
+          #  - "tls"
           #  - "namespaces=default,test"
           securityContext:
             privileged: true
