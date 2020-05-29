@@ -118,6 +118,7 @@ func fakeKubelet() kubernetes.Kubelet {
 			},
 		},
 		Status: v1.PodStatus{
+			Phase:  v1.PodRunning,
 			PodIP:  "127.0.0.1",
 			HostIP: "10.0.0.0",
 			ContainerStatuses: []v1.ContainerStatus{
@@ -158,6 +159,7 @@ func fakeKubelet() kubernetes.Kubelet {
 			},
 		},
 		Status: v1.PodStatus{
+			Phase:  v1.PodRunning,
 			PodIP:  "127.0.0.2",
 			HostIP: "10.0.0.0",
 			ContainerStatuses: []v1.ContainerStatus{
