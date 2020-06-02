@@ -92,26 +92,34 @@ func getContainers(clusterName string, nodeName string, pods []v1.Pod) []Contain
 	var containers []ContainerInfo
 
 	for _, pod := range pods {
+
+		if pod.Status.Phase != v1.PodRunning {
+			continue
+		}
+
 		for idx, cs := range pod.Status.ContainerStatuses {
-			if cs.State.Running != nil || cs.State.Waiting != nil {
-				ports := getPorts(pod, idx)
-				c := ContainerInfo{
-					Name:           cs.Name,
-					ID:             cs.ContainerID,
-					Image:          cs.Image,
-					ImageID:        cs.ImageID,
-					Ports:          ports,
-					PodIP:          pod.Status.PodIP,
-					PodLabels:      pod.Labels,
-					PodAnnotations: pod.Annotations,
-					PodName:        pod.Name,
-					NodeName:       nodeName,
-					NodeIP:         pod.Status.HostIP,
-					Namespace:      pod.Namespace,
-					Cluster:        clusterName,
-				}
-				containers = append(containers, c)
+
+			if cs.State.Running == nil {
+				continue
 			}
+
+			ports := getPorts(pod, idx)
+			c := ContainerInfo{
+				Name:           cs.Name,
+				ID:             cs.ContainerID,
+				Image:          cs.Image,
+				ImageID:        cs.ImageID,
+				Ports:          ports,
+				PodIP:          pod.Status.PodIP,
+				PodLabels:      pod.Labels,
+				PodAnnotations: pod.Annotations,
+				PodName:        pod.Name,
+				NodeName:       nodeName,
+				NodeIP:         pod.Status.HostIP,
+				Namespace:      pod.Namespace,
+				Cluster:        clusterName,
+			}
+			containers = append(containers, c)
 		}
 	}
 	return containers
