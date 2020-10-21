@@ -102,4 +102,8 @@ snyk/monitor: deps-only
 	@echo "=== $(PROJECT) === [ snyk/monitor ]: Running snyk..."
 	@snyk monitor --file=go.mod --org=ohai
 
+# Include thematic Makefiles
+include $(CURDIR)/build/ci.mk
+include $(CURDIR)/build/release.mk
+
 .PHONY: all fmt build clean tools tools-update deps deps-only validate compile compile-only test check-version tools-golangci-lint docker-build release release/deps release/test snyk snyk/monitor docker-release
