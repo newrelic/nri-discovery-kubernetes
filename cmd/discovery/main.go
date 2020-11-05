@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	cfg "github.com/newrelic/nri-discovery-kubernetes/internal/config"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/discovery"
@@ -20,7 +21,8 @@ func main() {
 
 	config := cfg.NewConfig(Version)
 
-	kubelet, err := kubernetes.NewKubelet(config.Port, config.TLS)
+	timeout := time.Duration(config.Timeout) * time.Millisecond
+	kubelet, err := kubernetes.NewKubelet(config.Host, config.Port, config.TLS, config.AutoConfig, timeout)
 	if err != nil {
 		log.Printf("failed to get Kubernetes configuration: %s", err)
 		os.Exit(1)

@@ -3,22 +3,22 @@ package kubernetes
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
-	"os"
-	"path/filepath"
-	"strconv"
-
+	configPkg "github.com/newrelic/nri-discovery-kubernetes/internal/config"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strconv"
+	"time"
 )
 
-const host = "localhost"
 const podsPath = "/pods"
 const clusterNameEnvVar = "CLUSTER_NAME"
-const kubeletHostEnvVar = "NRK8S_NODE_NAME"
+const nodeNameEnvVar = "NRK8S_NODE_NAME"
 
 type PortsMap map[string]int32
 type LabelsMap map[string]string
@@ -147,7 +147,7 @@ func getClusterName() string {
 	return clusterName
 }
 
-func NewKubelet(port int, useTLS bool) (Kubelet, error) {
+func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout time.Duration) (Kubelet, error) {
 	config, err := rest.InClusterConfig()
 	// not inside the cluster?
 	if err != nil {
@@ -159,12 +159,29 @@ func NewKubelet(port int, useTLS bool) (Kubelet, error) {
 	}
 
 	clusterName := getClusterName()
-	kubeletHost, isKubeletHostSet := os.LookupEnv(kubeletHostEnvVar)
+	nodeName, isNodeNameSet := os.LookupEnv(nodeNameEnvVar)
+	if autoConfig {
+		if !isNodeNameSet {
+			return nil, fmt.Errorf("failed to auto config kubelet client, '%s' env var not set", nodeNameEnvVar)
+		}
+		client, err := http.NewKubeletClient(nodeName, timeout)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize kubelet client: %s", err)
+		}
 
-	if !isKubeletHostSet {
-		// If the environment variable represented by kubeletHostEnvVar is not set,
-		// fallback to the default value.
-		kubeletHost = host
+		kubelet := &kubelet{
+			client:      &client,
+			NodeName:    nodeName,
+			ClusterName: clusterName,
+		}
+		return kubelet, nil
+	}
+
+	// host provided by cmd line arg has higher precedence.
+	// if host cmd line arg is not provided use NRK8S_NODE_NAME in case is set, otherwise localhost.
+	var kubeletHost = host
+	if isNodeNameSet && host == configPkg.DefaultHost {
+		kubeletHost = nodeName
 	}
 
 	hostUrl := makeUrl(kubeletHost, port, useTLS)

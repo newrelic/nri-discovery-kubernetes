@@ -6,10 +6,6 @@ import (
 	"testing"
 )
 
-func pointerToBool(b bool) *bool {
-	return &b
-}
-
 func getPod(phase v1.PodPhase, containerStatus ...v1.ContainerStatus) v1.Pod {
 	return v1.Pod{
 		Status: v1.PodStatus{
@@ -29,7 +25,6 @@ func buildContainerStatus(containerName string, containerState v1.ContainerState
 		Image:                "k8s.gcr.io/kube-scheduler:v1.18.2",
 		ImageID:              "docker-pullable://k8s.gcr.io/kube-scheduler@sha256:69f90a33b64c99e4c78e3cae36b0c767729b5a54203aa35524b1033708d1b482",
 		ContainerID:          "docker://fd5fd1918be39db9992067f87f4daa755c83adbec63aece69879fb29d45514a0",
-		Started:              pointerToBool(true),
 	}
 }
 
