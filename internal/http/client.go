@@ -32,12 +32,13 @@ func (c *httpClient) Get(path string) ([]byte, error) {
 		return nil, err
 	}
 
+	defer resp.Body.Close()
+	buff, _ := ioutil.ReadAll(resp.Body)
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New(resp.Status)
 	}
 
-	buff, _ := ioutil.ReadAll(resp.Body)
-	_ = resp.Body.Close()
 	return buff, nil
 }
 
@@ -81,11 +82,12 @@ func (kc *kubeletClient) Get(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	defer resp.Body.Close()
+	buff, _ := ioutil.ReadAll(resp.Body)
+
 	if resp.StatusCode != netHttp.StatusOK {
 		return nil, errors.New(resp.Status)
 	}
-
-	buff, _ := ioutil.ReadAll(resp.Body)
-	_ = resp.Body.Close()
 	return buff, nil
 }
