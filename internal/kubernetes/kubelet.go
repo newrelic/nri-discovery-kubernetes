@@ -6,6 +6,7 @@ import (
 	configPkg "github.com/newrelic/nri-discovery-kubernetes/internal/config"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
+	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -163,15 +164,15 @@ func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout tim
 	if autoConfig && isNodeNameSet {
 		client, err := http.NewKubeletClient(nodeName, timeout)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize kubelet client: %s", err)
+			logrus.WithError(err).Warn("failed to initialize kubelet client")
+		} else {
+			kubelet := &kubelet{
+				client:      &client,
+				NodeName:    nodeName,
+				ClusterName: clusterName,
+			}
+			return kubelet, nil
 		}
-
-		kubelet := &kubelet{
-			client:      &client,
-			NodeName:    nodeName,
-			ClusterName: clusterName,
-		}
-		return kubelet, nil
 	}
 
 	// host provided by cmd line arg has higher precedence.
