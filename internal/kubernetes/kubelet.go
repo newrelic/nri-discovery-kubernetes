@@ -160,10 +160,7 @@ func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout tim
 
 	clusterName := getClusterName()
 	nodeName, isNodeNameSet := os.LookupEnv(nodeNameEnvVar)
-	if autoConfig {
-		if !isNodeNameSet {
-			return nil, fmt.Errorf("failed to auto config kubelet client, '%s' env var not set", nodeNameEnvVar)
-		}
+	if autoConfig && isNodeNameSet {
 		client, err := http.NewKubeletClient(nodeName, timeout)
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize kubelet client: %s", err)
@@ -180,7 +177,7 @@ func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout tim
 	// host provided by cmd line arg has higher precedence.
 	// if host cmd line arg is not provided use NRK8S_NODE_NAME in case is set, otherwise localhost.
 	var kubeletHost = host
-	if isNodeNameSet && host == configPkg.DefaultHost {
+	if isNodeNameSet && !configPkg.IsFlagPassed(configPkg.Host) {
 		kubeletHost = nodeName
 	}
 

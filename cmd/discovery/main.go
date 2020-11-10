@@ -22,7 +22,7 @@ func main() {
 	config := cfg.NewConfig(Version)
 
 	timeout := time.Duration(config.Timeout) * time.Millisecond
-	kubelet, err := kubernetes.NewKubelet(config.Host, config.Port, config.TLS, config.AutoConfig, timeout)
+	kubelet, err := kubernetes.NewKubelet(config.Host, config.Port, config.TLS, config.IsAutoConfig(), timeout)
 	if err != nil {
 		log.Printf("failed to get Kubernetes configuration: %s", err)
 		os.Exit(1)
