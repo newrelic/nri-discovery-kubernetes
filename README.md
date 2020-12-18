@@ -1,4 +1,4 @@
-[![Community Project header](https://github.com/newrelic/open-source-office/raw/master/examples/categories/images/Community_Project.png)](https://github.com/newrelic/open-source-office/blob/master/examples/categories/index.md#community-project)
+[![Community Plus header](https://github.com/newrelic/opensource-website/raw/master/src/images/categories/Community_Plus.png)](https://opensource.newrelic.com/oss-category/#community-plus)
 
 # New Relic Kubernetes Auto-Discovery [![Build Status](https://travis-ci.org/newrelic/nri-discovery-kubernetes.svg?branch=master)](https://travis-ci.org/newrelic/nri-prometheus.svg?branch=master)[![CLA assistant](https://cla-assistant.io/readme/badge/newrelic/nri-discovery-kubernetes)](https://cla-assistant.io/newrelic/nri-discovery-kubernetes)
 
@@ -14,8 +14,8 @@ Currently, tests are totally isolated and you don't need a cluster to run them.
 
 ### Requirements
 
-1. **Go 1.13**. This project uses [go modules](https://github.com/golang/go/wiki/Modules), which makes it incompatible with previous Go versions. 
-   
+1. **Go 1.13**. This project uses [go modules](https://github.com/golang/go/wiki/Modules), which makes it incompatible with previous Go versions.
+
    It can work with **Go 1.11** but you will need to set **GO111MODULE=on**.
 
 2. Ensure you've added `$GOPATH/bin` to your `$PATH`, otherwise builds won't be possible.
@@ -38,7 +38,7 @@ In case you wish to push your own version of the image to a Docker registry, you
 `docker build . -t <YOUR_IMAGE_NAME>`
 ```
 
-or 
+or
 
 ```bash
 `docker build . -f Dockerfile.release -t <YOUR_IMAGE_NAME>`
