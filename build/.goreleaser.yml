@@ -8,9 +8,9 @@ before:
 
 builds:
   - id: nri-discovery-kubernetes-nix
-    main: ./src
+    main: ./cmd/discovery
     binary: nri-discovery-kubernetes
-    gobinary: "go1.9.7"
+    gobinary: "go1.15.2"
     ldflags:
       - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}}
     goos:
@@ -27,9 +27,9 @@ builds:
         goarch: 386
 
   - id: nri-discovery-kubernetes-win
-    main: ./src
+    main: ./cmd/discovery
     binary: nri-discovery-kubernetes
-    gobinary: "go1.9.7"
+    gobinary: "go1.15.2"
     ldflags:
       - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}}
     goos:
@@ -38,7 +38,7 @@ builds:
       - 386
       - amd64
     hooks:
-      pre: build/windows/set_exe_properties.sh {{ .Env.TAG }} "redis"
+      pre: build/windows/set_exe_properties.sh {{ .Env.TAG }} "discovery-kubernetes"
 
 nfpms:
   - id: nri-discovery-kubernetes-deb

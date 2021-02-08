@@ -7,7 +7,6 @@ BINARY_NAME   = $(PROJECT)
 IMAGE_NAME   ?= newrelic/nri-discovery-kubernetes
 GOPATH := $(shell go env GOPATH)
 GORELEASER_VERSION := v0.155.0
-GORELEASER_SHA256 := e9e61de6565ad4acbe33a944abbeaf0d75582c10b89b793c99acd41a0846c166
 GORELEASER_BIN ?= bin/goreleaser
 GOLANGCILINT_VERSION = v1.36.0
 GOLANGCI_LINT_BIN = bin/golangci-lint

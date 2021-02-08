@@ -1,4 +1,4 @@
-FROM golang:1.13-alpine3.11 AS build
+FROM golang:1.15.2-alpine3.13 AS build
 RUN apk add --no-cache --update git make
 
 WORKDIR /go/src/github.com/newrelic/nri-discovery-kubernetes

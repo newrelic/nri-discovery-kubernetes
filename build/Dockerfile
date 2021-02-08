@@ -10,8 +10,8 @@ RUN apt-get update \
         debsigs \
         unzip \
         zip \
-    && go get golang.org/dl/go1.9.7 \
-    && /go/bin/go1.9.7 download
+    && go get golang.org/dl/go1.15.2 \
+    && /go/bin/go1.15.2 download
 
 RUN curl -L https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.deb -o gh_${GH_VERSION}_linux_amd64.deb
 RUN dpkg -i gh_${GH_VERSION}_linux_amd64.deb
