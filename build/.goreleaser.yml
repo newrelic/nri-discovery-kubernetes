@@ -95,13 +95,13 @@ archives:
   - id: nri-discovery-kubernetes-nix
     builds:
       - nri-discovery-kubernetes-nix
-    name_template: "{{ .ProjectName }}-{{ .Arch }}.{{ .Version }}"
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Version }}_{{ .Arch }}"
     format: tar.gz
 
   - id: nri-discovery-kubernetes-win
     builds:
       - nri-discovery-kubernetes-win
-    name_template: "{{ .ProjectName }}-{{ .Arch }}.{{ .Version }}_dirty"
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Version }}_{{ .Arch }}"
     format: zip
 
 # we use custom publisher for fixing archives and signing them
