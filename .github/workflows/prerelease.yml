@@ -10,35 +10,37 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GO_VERSION: '1.9.7'
-  GPG_MAIL: 'infrastructure-eng@newrelic.com'
-  GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-  GPG_PRIVATE_KEY_BASE64: ${{ secrets.GPG_PRIVATE_KEY_BASE64 }} # base64 encoded
   INTEGRATION: "discovery-kubernetes"
   ORIGINAL_REPO_NAME: 'newrelic/nri-discovery-kubernetes'
-  PFX_CERTIFICATE_BASE64: ${{ secrets.PFX_CERTIFICATE_BASE64 }} # base64 encoded
-  PFX_CERTIFICATE_DESCRIPTION: 'New Relic'
-  PFX_PASSPHRASE:  ${{ secrets.PFX_PASSPHRASE }}
   REPO_FULL_NAME: ${{ github.event.repository.full_name }}
-  SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-  SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
-  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
   TAG: ${{ github.event.release.tag_name }}
 
 jobs:
-
   validate:
     name: Validate code via linters
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.OHAI_DOCKER_HUB_ID }}
+          password: ${{ secrets.OHAI_DOCKER_HUB_PASSWORD }}
       - name: Validate code
         run: make ci/validate
 
   snyk:
     name: Run security checks via snyk
     runs-on: ubuntu-20.04
+    env:
+      SNYK_TOKEN: ${{ secrets.COREINT_SNYK_TOKEN }}
     steps:
       - uses: actions/checkout@v2
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.OHAI_DOCKER_HUB_ID }}
+          password: ${{ secrets.OHAI_DOCKER_HUB_PASSWORD }}
       - name: Scan code for vulnerabilities
         run: make ci/snyk-test
 
@@ -47,6 +49,11 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.OHAI_DOCKER_HUB_ID }}
+          password: ${{ secrets.OHAI_DOCKER_HUB_PASSWORD }}
       - name: Unit tests
         run: make ci/test
 
@@ -98,17 +105,26 @@ jobs:
     name: Build binary for *Nix/Win, create archives for *Nix/Win, create packages for *Nix, upload all artifacts into GH Release assets
     runs-on: ubuntu-20.04
     needs: [validate, test-nix, test-windows, snyk, test-integration-nix]
+    env:
+      GPG_MAIL: 'infrastructure-eng@newrelic.com'
+      GPG_PASSPHRASE: ${{ secrets.OHAI_GPG_PASSPHRASE }}
+      GPG_PRIVATE_KEY_BASE64: ${{ secrets.OHAI_GPG_PRIVATE_KEY_BASE64 }} # base64 encoded
     steps:
       - uses: actions/checkout@v2
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.OHAI_DOCKER_HUB_ID }}
+          password: ${{ secrets.OHAI_DOCKER_HUB_PASSWORD }}
       - name: Pre release
         run: make ci/prerelease
       - name: Notify failure via Slack
         if: ${{ failure() }}
         uses: archive/github-actions-slack@master
         with:
-          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_TOKEN }}
-          slack-channel: ${{ env.SLACK_CHANNEL }}
-          slack-text: ":shit: Repo: ${{ env.REPO_FULL_NAME }}, prerelease for nix FAILURE!"
+          slack-bot-user-oauth-access-token: ${{ secrets.COREINT_SLACK_TOKEN }}
+          slack-channel: ${{ secrets.COREINT_SLACK_CHANNEL }}
+          slack-text: "❌ `${{ env.REPO_FULL_NAME }}`: prerelease pipeline failed."
 
   package-win:
     name: Create MSI & Upload into GH Release assets
@@ -116,6 +132,9 @@ jobs:
     needs: [prerelease]
     env:
       GOPATH: ${{ github.workspace }}
+      PFX_CERTIFICATE_BASE64: ${{ secrets.OHAI_PFX_CERTIFICATE_BASE64 }} # base64 encoded
+      PFX_CERTIFICATE_DESCRIPTION: 'New Relic'
+      PFX_PASSPHRASE: ${{ secrets.OHAI_PFX_PASSPHRASE }}
     defaults:
       run:
         working-directory: src/github.com/${{env.ORIGINAL_REPO_NAME}}
@@ -146,6 +165,6 @@ jobs:
         if: ${{ failure() }}
         uses: archive/github-actions-slack@master
         with:
-          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_TOKEN }}
-          slack-channel: ${{ env.SLACK_CHANNEL }}
-          slack-text: ":shit: Repo: ${{ env.REPO_FULL_NAME }}, prerelease for Windows FAILURE!"
+          slack-bot-user-oauth-access-token: ${{ secrets.COREINT_SLACK_TOKEN }}
+          slack-channel: ${{ secrets.COREINT_SLACK_CHANNEL }}
+          slack-text: "❌ `${{ env.REPO_FULL_NAME }}`: prerelease pipeline failed."
