@@ -82,7 +82,7 @@ nfpms:
         dst: /usr/share/doc/nri-discovery-kubernetes/CHANGELOG.md
       - src: README.md
         dst: /usr/share/doc/nri-discovery-kubernetes/README.md
-      - src: LICENSE
+      - src: LICENSE"
         dst: /usr/share/doc/nri-discovery-kubernetes/LICENSE
     dependencies:
       - "newrelic-infra"
@@ -95,13 +95,18 @@ archives:
   - id: nri-discovery-kubernetes-nix
     builds:
       - nri-discovery-kubernetes-nix
-    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Version }}_{{ .Arch }}"
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format: tar.gz
+    # Manual replacements to comply with
+    # https://github.com/newrelic/infrastructure-bundle/blob/master/build/scripts/prepare_discoveries.sh
+    replacements:
+      amd64: x86_64
+      linux: Linux
 
   - id: nri-discovery-kubernetes-win
     builds:
       - nri-discovery-kubernetes-win
-    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Version }}_{{ .Arch }}"
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format: zip
 
 # we use custom publisher for fixing archives and signing them
