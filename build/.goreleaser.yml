@@ -59,7 +59,7 @@ nfpms:
         dst: /usr/share/doc/nri-discovery-kubernetes/CHANGELOG.md
       - src: README.md
         dst: /usr/share/doc/nri-discovery-kubernetes/README.md
-      - src: LICENSE"
+      - src: LICENSE
         dst: /usr/share/doc/nri-discovery-kubernetes/LICENSE
     dependencies:
       - "newrelic-infra"
@@ -82,7 +82,7 @@ nfpms:
         dst: /usr/share/doc/nri-discovery-kubernetes/CHANGELOG.md
       - src: README.md
         dst: /usr/share/doc/nri-discovery-kubernetes/README.md
-      - src: LICENSE"
+      - src: LICENSE
         dst: /usr/share/doc/nri-discovery-kubernetes/LICENSE
     dependencies:
       - "newrelic-infra"
