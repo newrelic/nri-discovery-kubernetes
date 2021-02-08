@@ -7,14 +7,15 @@ before:
   #- make validate
 
 builds:
-  - id: nri-redis-nix
+  - id: nri-discovery-kubernetes-nix
     main: ./src
-    binary: nri-redis
+    binary: nri-discovery-kubernetes
     gobinary: "go1.9.7"
     ldflags:
       - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}}
     goos:
       - linux
+      - freebsd
       - darwin
     goarch:
       - 386
@@ -25,9 +26,9 @@ builds:
       - goos: darwin
         goarch: 386
 
-  - id: nri-redis-win
+  - id: nri-discovery-kubernetes-win
     main: ./src
-    binary: nri-redis
+    binary: nri-discovery-kubernetes
     gobinary: "go1.9.7"
     ldflags:
       - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}}
@@ -40,49 +41,49 @@ builds:
       pre: build/windows/set_exe_properties.sh {{ .Env.TAG }} "redis"
 
 nfpms:
-  - id: nri-redis-deb
+  - id: nri-discovery-kubernetes-deb
     builds:
-      - nri-redis-nix
+      - nri-discovery-kubernetes-nix
     file_name_template: "{{ .ProjectName }}_{{ .Version }}-1_{{ .Arch }}"
     vendor: "New Relic, Inc."
     homepage: "https://www.newrelic.com/infrastructure"
     maintainer: "New Relic Infrastructure Team <infrastructure-eng@newrelic.com>"
-    description: "New Relic Infrastructure redis Integration extend the core New Relic\nInfrastructure agent's capabilities to allow you to collect metric and\nlive state data from redis components."
+    description: "Automatically discovers containers running inside Kubernetes"
     license: "https://newrelic.com/terms (also see LICENSE installed with this package)"
     # Formats to be generated.
     formats:
       - deb
     bindir: "/var/db/newrelic-infra/newrelic-integrations/bin"
-    files:
-      "redis-config.yml.sample": "/etc/newrelic-infra/integrations.d/redis-config.yml.sample"
-      "CHANGELOG.md": "/usr/share/doc/nri-redis/CHANGELOG.md"
-      "README.md":  "/usr/share/doc/nri-redis/README.md"
-      "LICENSE": "/usr/share/doc/nri-redis/LICENSE"
-    config_files:
-      "redis-definition.yml": "/var/db/newrelic-infra/newrelic-integrations/redis-definition.yml"
+    contents:
+      - src: CHANGELOG.md
+        dst: /usr/share/doc/nri-discovery-kubernetes/CHANGELOG.md
+      - src: README.md
+        dst: /usr/share/doc/nri-discovery-kubernetes/README.md
+      - src: LICENSE"
+        dst: /usr/share/doc/nri-discovery-kubernetes/LICENSE
     dependencies:
       - "newrelic-infra"
 
-  - id: nri-redis-rpm
+  - id: nri-discovery-kubernetes-rpm
     builds:
-      - nri-redis-nix
+      - nri-discovery-kubernetes-nix
     file_name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Arch }}"
     vendor: "New Relic, Inc."
     homepage: "https://www.newrelic.com/infrastructure"
     maintainer: "New Relic Infrastructure Team <infrastructure-eng@newrelic.com>"
-    description: "New Relic Infrastructure redis Integration extend the core New Relic\nInfrastructure agent's capabilities to allow you to collect metric and\nlive state data from redis components."
+    description: "Automatically discovers containers running inside Kubernetes"
     license: "https://newrelic.com/terms (also see LICENSE installed with this package)"
     # Formats to be generated.
     formats:
       - rpm
     bindir: "/var/db/newrelic-infra/newrelic-integrations/bin"
-    files:
-      "redis-config.yml.sample": "/etc/newrelic-infra/integrations.d/redis-config.yml.sample"
-      "CHANGELOG.md": "/usr/share/doc/nri-redis/CHANGELOG.md"
-      "README.md":  "/usr/share/doc/nri-redis/README.md"
-      "LICENSE": "/usr/share/doc/nri-redis/LICENSE"
-    config_files:
-      "redis-definition.yml": "/var/db/newrelic-infra/newrelic-integrations/redis-definition.yml"
+    contents:
+      - src: CHANGELOG.md
+        dst: /usr/share/doc/nri-discovery-kubernetes/CHANGELOG.md
+      - src: README.md
+        dst: /usr/share/doc/nri-discovery-kubernetes/README.md
+      - src: LICENSE"
+        dst: /usr/share/doc/nri-discovery-kubernetes/LICENSE
     dependencies:
       - "newrelic-infra"
     overrides:
@@ -91,24 +92,16 @@ nfpms:
           amd64: 1.x86_64
 
 archives:
-  - id: nri-redis-nix
+  - id: nri-discovery-kubernetes-nix
     builds:
-      - nri-redis-nix
-    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Version }}_{{ .Arch }}_dirty"
-    files:
-      - redis-config.yml.sample
-      - redis-definition.yml
-      # installation scripts?
+      - nri-discovery-kubernetes-nix
+    name_template: "{{ .ProjectName }}-{{ .Arch }}.{{ .Version }}"
     format: tar.gz
 
-  - id: nri-redis-win
+  - id: nri-discovery-kubernetes-win
     builds:
-      - nri-redis-win
+      - nri-discovery-kubernetes-win
     name_template: "{{ .ProjectName }}-{{ .Arch }}.{{ .Version }}_dirty"
-    files:
-      - redis-win-config.yml.sample
-      - redis-win-definition.yml
-      # installation scripts?
     format: zip
 
 # we use custom publisher for fixing archives and signing them

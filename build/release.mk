@@ -33,13 +33,6 @@ else
 	@$(GORELEASER_BIN) build --config $(CURDIR)/build/.goreleaser.yml --snapshot --rm-dist
 endif
 
-.PHONY : release/fix-archive
-release/fix-archive:
-	@echo "===> $(INTEGRATION) === [release/fix-archive] fixing tar.gz archives internal structure"
-	@bash $(CURDIR)/build/nix/fix_archives.sh $(CURDIR)
-	@echo "===> $(INTEGRATION) === [release/fix-archive] fixing zip archives internal structure"
-	@bash $(CURDIR)/build/windows/fix_archives.sh $(CURDIR)
-
 .PHONY : release/sign/nix
 release/sign/nix:
 	@echo "===> $(INTEGRATION) === [release/sign] signing packages"
@@ -52,7 +45,7 @@ release/publish:
 	@bash $(CURDIR)/build/upload_artifacts_gh.sh
 
 .PHONY : release
-release: release/build release/fix-archive release/sign/nix release/publish release/clean
+release: release/build release/sign/nix release/publish release/clean
 	@echo "===> $(INTEGRATION) === [release/publish] full pre-release cycle complete for nix"
 
 OS := $(shell uname -s)
