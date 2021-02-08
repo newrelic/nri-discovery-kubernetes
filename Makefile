@@ -9,7 +9,7 @@ GOPATH := $(shell go env GOPATH)
 GORELEASER_VERSION := v0.129.0
 GORELEASER_SHA256 := e9e61de6565ad4acbe33a944abbeaf0d75582c10b89b793c99acd41a0846c166
 GORELEASER_BIN ?= bin/goreleaser
-GOLANGCILINT_VERSION = v1.27.0
+GOLANGCILINT_VERSION = v1.36.0
 GOLANGCI_LINT_BIN = bin/golangci-lint
 
 all: build
@@ -32,9 +32,6 @@ tools-golangci-lint: $(GOLANGCI_LINT_BIN)
 
 fmt:
 	@go fmt ./...
-
-bin:
-	@mkdir -p bin
 
 deps: tools deps-only
 
@@ -76,23 +73,6 @@ ifneq ("$(GOARCH)" "$(NATIVEARCH)")
 	$(error GOARCH variable is not $(NATIVEARCH). Cross-compiling is only allowed for 'clean', 'deps-only' and 'compile-only' targets)
 endif
 endif
-
-$(GORELEASER_BIN): bin
-	@echo "=== $(PROJECT) === [ release/deps ]: Installing goreleaser"
-	@(wget -qO /tmp/goreleaser.tar.gz https://github.com/goreleaser/goreleaser/releases/download/$(GORELEASER_VERSION)/goreleaser_Linux_x86_64.tar.gz)
-	@(tar -xf  /tmp/goreleaser.tar.gz -C bin/)
-	@(rm -f /tmp/goreleaser.tar.gz)
-
-release/deps: $(GORELEASER_BIN)
-
-release: release/deps
-	@echo "=== $(PROJECT) === [ release ]: Releasing new version..."
-	@$(GORELEASER_BIN) release
-	@$(MAKE) snyk/monitor
-
-release/test: release/deps
-	@echo "=== $(PROJECT) === [ release/test ]: Testing releasing new version..."
-	@$(GORELEASER_BIN) release --snapshot --skip-publish --rm-dist
 
 snyk: deps-only
 	@echo "=== $(PROJECT) === [ snyk ]: Running snyk..."
