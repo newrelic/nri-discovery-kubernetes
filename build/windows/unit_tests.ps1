@@ -1,5 +1,6 @@
 echo "--- Running tests"
 
+go mod download
 go test ./...
 if (-not $?)
 {
