@@ -25,6 +25,12 @@ builds:
     ignore:
       - goos: darwin
         goarch: 386
+      - goos: darwin
+        goarch: arm
+      - goos: freebsd
+        goarch: 386
+      - goos: freebsd
+        goarch: arm
 
   - id: nri-discovery-kubernetes-win
     main: ./cmd/discovery
