@@ -7,7 +7,7 @@ set -e
 #
 PROJECT_PATH=$1
 
-for zip_dirty in $(find dist -regex ".*_dirty\.\(zip\)");do
+find dist -regex ".*_dirty\.\(zip\)" | while read -r zip_dirty; do
   zip_file_name=${zip_dirty:5:${#zip_dirty}-(5+10)} # Strips begining and end chars
   ZIP_CLEAN="${zip_file_name}.zip"
   ZIP_TMP="dist/zip_temp"
