@@ -1,7 +1,6 @@
 before:
   hooks:
-  # You may remove this if you don't use go modules.
-  #- go mod download
+    - go mod download
   # you may remove this if you don't need go generate
   #- go generate ./...
   #- make validate
@@ -41,7 +40,6 @@ builds:
     goos:
       - windows
     goarch:
-      - 386
       - amd64
     hooks:
       pre: build/windows/set_exe_properties.sh {{ .Env.TAG }} "discovery-kubernetes"
