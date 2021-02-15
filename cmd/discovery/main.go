@@ -14,12 +14,12 @@ import (
 
 var (
 	// Version of the integration
-	Version = "dev"
+	integrationVersion = "dev"
 )
 
 func main() {
 
-	config := cfg.NewConfig(Version)
+	config := cfg.NewConfig(integrationVersion)
 
 	timeout := time.Duration(config.Timeout) * time.Millisecond
 	kubelet, err := kubernetes.NewKubelet(config.Host, config.Port, config.TLS, config.IsAutoConfig(), timeout)
