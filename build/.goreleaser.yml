@@ -1,0 +1,97 @@
+before:
+  hooks:
+    - go mod download
+  # you may remove this if you don't need go generate
+  #- go generate ./...
+  #- make validate
+
+builds:
+  - id: nri-discovery-kubernetes-nix
+    main: ./cmd/discovery
+    binary: nri-discovery-kubernetes
+    gobinary: "go1.15.2"
+    ldflags:
+      - -s -w -X cmd.main.integrationVersion={{.Version}} -X cmd.main.gitCommit={{.Commit}}
+    goos:
+      - linux
+      - freebsd
+      - darwin
+    goarch:
+      - 386
+      - amd64
+      - arm
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: 386
+      - goos: darwin
+        goarch: arm
+      - goos: freebsd
+        goarch: 386
+      - goos: freebsd
+        goarch: arm
+
+  - id: nri-discovery-kubernetes-win
+    main: ./cmd/discovery
+    binary: nri-discovery-kubernetes
+    gobinary: "go1.15.2"
+    ldflags:
+      - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}}
+    goos:
+      - windows
+    goarch:
+      - amd64
+    hooks:
+      pre: build/windows/set_exe_properties.sh {{ .Env.TAG }} "discovery-kubernetes"
+
+nfpms:
+  - id: nri-discovery-kubernetes-pkg
+    builds:
+      - nri-discovery-kubernetes-nix
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}-1_{{ .Arch }}"
+    vendor: "New Relic, Inc."
+    homepage: "https://www.newrelic.com/infrastructure"
+    maintainer: "New Relic Infrastructure Team <infrastructure-eng@newrelic.com>"
+    description: "Automatically discovers containers running inside Kubernetes"
+    license: "https://newrelic.com/terms (also see LICENSE installed with this package)"
+    # Formats to be generated.
+    formats:
+      - deb
+      - rpm
+    bindir: "/var/db/newrelic-infra/newrelic-integrations/bin"
+    contents:
+      - src: CHANGELOG.md
+        dst: /usr/share/doc/nri-discovery-kubernetes/CHANGELOG.md
+      - src: README.md
+        dst: /usr/share/doc/nri-discovery-kubernetes/README.md
+      - src: LICENSE
+        dst: /usr/share/doc/nri-discovery-kubernetes/LICENSE
+    dependencies:
+      - "newrelic-infra"
+    overrides:
+      rpm:
+        file_name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Arch }}"
+        replacements:
+          amd64: 1.x86_64
+
+archives:
+  - id: nri-discovery-kubernetes-nix
+    builds:
+      - nri-discovery-kubernetes-nix
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+    # Manual replacements to comply with
+    # https://github.com/newrelic/infrastructure-bundle/blob/master/build/scripts/prepare_discoveries.sh
+    replacements:
+      amd64: x86_64
+      linux: Linux
+
+  - id: nri-discovery-kubernetes-win
+    builds:
+      - nri-discovery-kubernetes-win
+    name_template: "{{ .ProjectName }}-{{ .Arch }}.{{ .Version }}"
+    format: zip
+
+# we use custom publisher for fixing archives and signing them
+release:
+  disable: true
