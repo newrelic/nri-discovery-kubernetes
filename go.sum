@@ -98,6 +98,7 @@ github.com/newrelic/infra-integrations-sdk v2.0.1-0.20180410150501-14a5386f9150+
 github.com/newrelic/infra-integrations-sdk v2.0.1-0.20180410150501-14a5386f9150+incompatible/go.mod h1:tMUHRMq6mJS0YyBnbWrTXAnREnQqC1AGO6Lu45u5xAM=
 github.com/newrelic/nri-kubernetes v1.26.5 h1:Mqn7OWygzGmn/Gsj2w2RXomUyqoBGfaWVFUmecFxSv4=
 github.com/newrelic/nri-kubernetes v1.26.5/go.mod h1:Gvpzf3RwS/TXA3ERh+G4HDrANzOxSgwyRIHeoFHMbQo=
+github.com/newrelic/nri-kubernetes v1.26.9/go.mod h1:Gvpzf3RwS/TXA3ERh+G4HDrANzOxSgwyRIHeoFHMbQo=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/pelletier/go-toml v1.2.0 h1:T5zMGML61Wp+FlcbWjRDT7yAxhJNAiPPLOFECq181zc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
