@@ -20,13 +20,17 @@ const (
 	DefaultPort = 10255
 )
 
-var _ = flag.String(namespaces, "", "(optional, default '') Comma separated list of namespaces to discover pods on")
-var _ = flag.Bool(insecure, false, `(optional, default false, deprecated) Use insecure (non-ssl) connection.
+var (
+	_ = flag.String(namespaces, "", "(optional, default '') Comma separated list of namespaces to discover pods on")
+	_ = flag.Bool(insecure, false, `(optional, default false, deprecated) Use insecure (non-ssl) connection.
 For backwards compatibility this flag takes precedence over 'tls')`)
-var _ = flag.Int(timeout, 5000, "(optional, default 5000) timeout in ms")
-var _ = flag.Bool(tls, false, "(optional, default false) Use secure (tls) connection")
-var _ = flag.Int(port, DefaultPort, "(optional, default 10255) Port used to connect to the kubelet")
-var _ = flag.String(Host, DefaultHost, "(optional, default "+DefaultHost+") Host used to connect to the kubelet")
+)
+var (
+	_ = flag.Int(timeout, 5000, "(optional, default 5000) timeout in ms")
+	_ = flag.Bool(tls, false, "(optional, default false) Use secure (tls) connection")
+	_ = flag.Int(port, DefaultPort, "(optional, default 10255) Port used to connect to the kubelet")
+	_ = flag.String(Host, DefaultHost, "(optional, default "+DefaultHost+") Host used to connect to the kubelet")
+)
 
 // Config defined the currently accepted configuration parameters of the Discoverer
 type Config struct {
@@ -75,7 +79,7 @@ func NewConfig(version string) Config {
 	v.AutomaticEnv()
 
 	// keep backwards compat
-	var useTLS = v.GetBool(tls)
+	useTLS := v.GetBool(tls)
 	if v.IsSet(insecure) {
 		useTLS = !v.GetBool(insecure)
 	}

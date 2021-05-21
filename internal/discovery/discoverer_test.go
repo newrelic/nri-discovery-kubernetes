@@ -2,13 +2,15 @@ package discovery
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
-	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestDiscoverer_Run(t *testing.T) {
@@ -81,13 +83,12 @@ func Test_PodsWithMultiplePorts_ReturnsIndexAndName(t *testing.T) {
 	assert.Contains(t, p, "2")
 	assert.Contains(t, p, "third")
 	assert.EqualValues(t, p["2"], p["third"])
-
 }
 
 func fakeKubelet() kubernetes.Kubelet {
-	pod1 := v1.Pod{
-		TypeMeta: v12.TypeMeta{},
-		ObjectMeta: v12.ObjectMeta{
+	pod1 := corev1.Pod{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
 			Name:        "test",
 			Namespace:   "test",
 			ClusterName: "test",
@@ -98,10 +99,10 @@ func fakeKubelet() kubernetes.Kubelet {
 				"test": "test",
 			},
 		},
-		Spec: v1.PodSpec{
-			Containers: []v1.Container{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
 				{
-					Ports: []v1.ContainerPort{
+					Ports: []corev1.ContainerPort{
 						{
 							Name:          "first",
 							ContainerPort: 1,
@@ -117,15 +118,15 @@ func fakeKubelet() kubernetes.Kubelet {
 				},
 			},
 		},
-		Status: v1.PodStatus{
-			Phase:  v1.PodRunning,
+		Status: corev1.PodStatus{
+			Phase:  corev1.PodRunning,
 			PodIP:  "127.0.0.1",
 			HostIP: "10.0.0.0",
-			ContainerStatuses: []v1.ContainerStatus{
+			ContainerStatuses: []corev1.ContainerStatus{
 				{
 					Name: "test",
-					State: v1.ContainerState{
-						Running: &v1.ContainerStateRunning{},
+					State: corev1.ContainerState{
+						Running: &corev1.ContainerStateRunning{},
 					},
 					ContainerID: "testID",
 					Image:       "testImage",
@@ -134,9 +135,9 @@ func fakeKubelet() kubernetes.Kubelet {
 			},
 		},
 	}
-	pod2 := v1.Pod{
-		TypeMeta: v12.TypeMeta{},
-		ObjectMeta: v12.ObjectMeta{
+	pod2 := corev1.Pod{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
 			Name:        "fake",
 			Namespace:   "fake",
 			ClusterName: "fake",
@@ -147,10 +148,10 @@ func fakeKubelet() kubernetes.Kubelet {
 				"fake": "fake",
 			},
 		},
-		Spec: v1.PodSpec{
-			Containers: []v1.Container{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
 				{
-					Ports: []v1.ContainerPort{
+					Ports: []corev1.ContainerPort{
 						{
 							ContainerPort: 1,
 						},
@@ -158,14 +159,14 @@ func fakeKubelet() kubernetes.Kubelet {
 				},
 			},
 		},
-		Status: v1.PodStatus{
-			Phase:  v1.PodRunning,
+		Status: corev1.PodStatus{
+			Phase:  corev1.PodRunning,
 			PodIP:  "127.0.0.2",
 			HostIP: "10.0.0.0",
-			ContainerStatuses: []v1.ContainerStatus{
+			ContainerStatuses: []corev1.ContainerStatus{
 				{
 					Name: "fake",
-					State: v1.ContainerState{
+					State: corev1.ContainerState{
 						Running: &v1.ContainerStateRunning{},
 					},
 					ContainerID: "fakeID",
@@ -176,10 +177,10 @@ func fakeKubelet() kubernetes.Kubelet {
 		},
 	}
 
-	podList := v1.PodList{
-		TypeMeta: v12.TypeMeta{},
-		ListMeta: v12.ListMeta{},
-		Items:    []v1.Pod{pod1, pod2},
+	podList := corev1.PodList{
+		TypeMeta: metav1.TypeMeta{},
+		ListMeta: metav1.ListMeta{},
+		Items:    []corev1.Pod{pod1, pod2},
 	}
 
 	client := fakeHttpClient(podList)
@@ -187,12 +188,12 @@ func fakeKubelet() kubernetes.Kubelet {
 	return k
 }
 
-func fakeHttpClient(pods v1.PodList) http.HttpClient {
+func fakeHttpClient(pods corev1.PodList) http.HttpClient {
 	return &FakeHttpClient{pods: pods}
 }
 
 type FakeHttpClient struct {
-	pods v1.PodList
+	pods corev1.PodList
 }
 
 func (k *FakeHttpClient) Get(path string) ([]byte, error) {

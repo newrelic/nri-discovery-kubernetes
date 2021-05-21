@@ -1,25 +1,26 @@
 package kubernetes
 
 import (
-	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/core/v1"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 )
 
-func getPod(phase v1.PodPhase, containerStatus ...v1.ContainerStatus) v1.Pod {
-	return v1.Pod{
-		Status: v1.PodStatus{
+func getPod(phase corev1.PodPhase, containerStatus ...corev1.ContainerStatus) corev1.Pod {
+	return corev1.Pod{
+		Status: corev1.PodStatus{
 			Phase:             phase,
 			ContainerStatuses: containerStatus,
 		},
 	}
 }
 
-func buildContainerStatus(containerName string, containerState v1.ContainerState) v1.ContainerStatus {
-	return v1.ContainerStatus{
+func buildContainerStatus(containerName string, containerState corev1.ContainerState) corev1.ContainerStatus {
+	return corev1.ContainerStatus{
 		Name:                 containerName,
 		State:                containerState,
-		LastTerminationState: v1.ContainerState{},
+		LastTerminationState: corev1.ContainerState{},
 		Ready:                true,
 		RestartCount:         1,
 		Image:                "k8s.gcr.io/kube-scheduler:v1.18.2",
@@ -28,27 +29,27 @@ func buildContainerStatus(containerName string, containerState v1.ContainerState
 	}
 }
 
-func buildContainerStatusWaiting(containerName string) v1.ContainerStatus {
-	return buildContainerStatus(containerName, v1.ContainerState{
-		Waiting:    &v1.ContainerStateWaiting{},
+func buildContainerStatusWaiting(containerName string) corev1.ContainerStatus {
+	return buildContainerStatus(containerName, corev1.ContainerState{
+		Waiting:    &corev1.ContainerStateWaiting{},
 		Running:    nil,
 		Terminated: nil,
 	})
 }
 
-func buildContainerStatusRunning(containerName string) v1.ContainerStatus {
-	return buildContainerStatus(containerName, v1.ContainerState{
+func buildContainerStatusRunning(containerName string) corev1.ContainerStatus {
+	return buildContainerStatus(containerName, corev1.ContainerState{
 		Waiting:    nil,
-		Running:    &v1.ContainerStateRunning{},
+		Running:    &corev1.ContainerStateRunning{},
 		Terminated: nil,
 	})
 }
 
-func buildContainerStatusTerminated(containerName string) v1.ContainerStatus {
-	return buildContainerStatus(containerName, v1.ContainerState{
+func buildContainerStatusTerminated(containerName string) corev1.ContainerStatus {
+	return buildContainerStatus(containerName, corev1.ContainerState{
 		Waiting:    nil,
 		Running:    nil,
-		Terminated: &v1.ContainerStateTerminated{},
+		Terminated: &corev1.ContainerStateTerminated{},
 	})
 }
 
@@ -73,14 +74,14 @@ func buildExpectedContainerInfo(containerName string) ContainerInfo {
 func TestGetContainers(t *testing.T) {
 	testCases := []struct {
 		testName           string
-		pods               []v1.Pod
+		pods               []corev1.Pod
 		expectedContainers []ContainerInfo
 	}{
 		{
 			testName: "Pods:1Running/Containers:2Running",
-			pods: []v1.Pod{
+			pods: []corev1.Pod{
 				getPod(
-					v1.PodRunning,
+					corev1.PodRunning,
 					buildContainerStatusRunning("test1"),
 					buildContainerStatusRunning("test2")),
 			},
@@ -91,9 +92,9 @@ func TestGetContainers(t *testing.T) {
 		},
 		{
 			testName: "Pods:1Running/Containers:1Running,1Waiting,1Terminated",
-			pods: []v1.Pod{
+			pods: []corev1.Pod{
 				getPod(
-					v1.PodRunning,
+					corev1.PodRunning,
 					buildContainerStatusRunning("test1"),
 					buildContainerStatusWaiting("test2"),
 					buildContainerStatusTerminated("test3")),
@@ -104,9 +105,9 @@ func TestGetContainers(t *testing.T) {
 		},
 		{
 			testName: "Pods:1Running/Containers:1Waiting,1Terminated",
-			pods: []v1.Pod{
+			pods: []corev1.Pod{
 				getPod(
-					v1.PodRunning,
+					corev1.PodRunning,
 					buildContainerStatusWaiting("test1"),
 					buildContainerStatusTerminated("test2")),
 			},
@@ -114,35 +115,35 @@ func TestGetContainers(t *testing.T) {
 		},
 		{
 			testName: "Pods:1Pending,1Succeeded,1Failed,1Unknown/Containers:4Running",
-			pods: []v1.Pod{
+			pods: []corev1.Pod{
 				getPod(
-					v1.PodPending,
+					corev1.PodPending,
 					buildContainerStatusRunning("test1")),
 				getPod(
-					v1.PodSucceeded,
+					corev1.PodSucceeded,
 					buildContainerStatusRunning("test2")),
 				getPod(
-					v1.PodFailed,
+					corev1.PodFailed,
 					buildContainerStatusRunning("test3")),
 				getPod(
-					v1.PodUnknown,
+					corev1.PodUnknown,
 					buildContainerStatusRunning("test4")),
 			},
 			expectedContainers: nil,
 		},
 		{
 			testName: "Pods:2Running,1Succeeded/Containers:3Running,1Waiting,1Terminated",
-			pods: []v1.Pod{
+			pods: []corev1.Pod{
 				getPod(
-					v1.PodRunning,
+					corev1.PodRunning,
 					buildContainerStatusRunning("test1"),
 					buildContainerStatusRunning("test2")),
 				getPod(
-					v1.PodRunning,
+					corev1.PodRunning,
 					buildContainerStatusRunning("test3"),
 					buildContainerStatusWaiting("test4")),
 				getPod(
-					v1.PodSucceeded,
+					corev1.PodSucceeded,
 					buildContainerStatusTerminated("test5")),
 			},
 			expectedContainers: []ContainerInfo{

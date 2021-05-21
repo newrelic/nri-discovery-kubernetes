@@ -1,13 +1,13 @@
 package utils
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_Contains_Return_True(t *testing.T) {
-
-	//given
+	// given
 	set := []string{
 		"a",
 		"abcd",
@@ -15,16 +15,15 @@ func Test_Contains_Return_True(t *testing.T) {
 	}
 	term := "abcd"
 
-	//when
+	// when
 	contains := Contains(set, term)
 
-	//then
+	// then
 	assert.True(t, contains)
 }
 
 func Test_Contains_Return_False(t *testing.T) {
-
-	//given
+	// given
 	set := []string{
 		"a",
 		"abcd",
@@ -32,22 +31,21 @@ func Test_Contains_Return_False(t *testing.T) {
 	}
 	term := "zxyw"
 
-	//when
+	// when
 	contains := Contains(set, term)
 
-	//then
+	// then
 	assert.False(t, contains)
 }
 
 func Test_Contains_Return_False_IfEmptySet(t *testing.T) {
-
-	//given
+	// given
 	var set []string
 	term := "string"
 
-	//when
+	// when
 	contains := Contains(set, term)
 
-	//then
+	// then
 	assert.False(t, contains)
 }

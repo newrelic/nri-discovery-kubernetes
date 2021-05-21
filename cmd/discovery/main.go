@@ -7,19 +7,16 @@ import (
 	"os"
 	"time"
 
-	cfg "github.com/newrelic/nri-discovery-kubernetes/internal/config"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/discovery"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
 )
 
-var (
-	// Version of the integration
-	integrationVersion = "dev"
-)
+// Version of the integration
+var integrationVersion = "dev"
 
 func main() {
-
-	config := cfg.NewConfig(integrationVersion)
+	config := config.NewConfig(integrationVersion)
 
 	timeout := time.Duration(config.Timeout) * time.Millisecond
 	kubelet, err := kubernetes.NewKubelet(config.Host, config.Port, config.TLS, config.IsAutoConfig(), timeout)
