@@ -3,20 +3,21 @@ package http
 import (
 	"crypto/tls"
 	"errors"
-	nriK8sClient "github.com/newrelic/nri-kubernetes/src/client"
-	nriKubeletClient "github.com/newrelic/nri-kubernetes/src/kubelet/client"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
-	netHttp "net/http"
 	"net/url"
 	"os"
 	"time"
+
+	"github.com/newrelic/nri-kubernetes/src/client"
+	kubeletclient "github.com/newrelic/nri-kubernetes/src/kubelet/client"
+	"github.com/sirupsen/logrus"
 )
 
 type HttpClient interface {
 	Get(path string) ([]byte, error)
 }
+
 type httpClient struct {
 	token string
 	http  http.Client
@@ -57,14 +58,14 @@ func NewClient(url url.URL, token string) HttpClient {
 
 // kubeletClient addapts the nri-kubernetes kubelet client.
 type kubeletClient struct {
-	client nriK8sClient.HTTPClient
+	client client.HTTPClient
 }
 
 // NewKubeletClient creates a new kubeletClient instance.
 func NewKubeletClient(nodeName string, timeout time.Duration) (HttpClient, error) {
 	logger := logrus.New()
 	logger.SetOutput(os.Stderr)
-	d, err := nriKubeletClient.NewDiscoverer(nodeName, logger)
+	d, err := kubeletclient.NewDiscoverer(nodeName, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func NewKubeletClient(nodeName string, timeout time.Duration) (HttpClient, error
 }
 
 func (kc *kubeletClient) Get(path string) ([]byte, error) {
-	resp, err := kc.client.Do(netHttp.MethodGet, path)
+	resp, err := kc.client.Do(http.MethodGet, path)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +87,7 @@ func (kc *kubeletClient) Get(path string) ([]byte, error) {
 	defer resp.Body.Close()
 	buff, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode != netHttp.StatusOK {
+	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New(resp.Status)
 	}
 	return buff, nil

@@ -3,27 +3,32 @@ package kubernetes
 import (
 	"encoding/json"
 	"fmt"
-	configPkg "github.com/newrelic/nri-discovery-kubernetes/internal/config"
-	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
-	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
-	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
+	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
-const podsPath = "/pods"
-const clusterNameEnvVar = "CLUSTER_NAME"
-const nodeNameEnvVar = "NRK8S_NODE_NAME"
+const (
+	podsPath          = "/pods"
+	clusterNameEnvVar = "CLUSTER_NAME"
+	nodeNameEnvVar    = "NRK8S_NODE_NAME"
+)
 
-type PortsMap map[string]int32
-type LabelsMap map[string]string
-type AnnotationsMap map[string]string
+type (
+	PortsMap       map[string]int32
+	LabelsMap      map[string]string
+	AnnotationsMap map[string]string
+)
 
 type ContainerInfo struct {
 	Name           string
@@ -60,14 +65,14 @@ func (kube *kubelet) FindContainers(namespaces []string) ([]ContainerInfo, error
 	return getContainers(kube.ClusterName, kube.NodeName, pods), nil
 }
 
-func (kube *kubelet) getPods() ([]v1.Pod, error) {
+func (kube *kubelet) getPods() ([]corev1.Pod, error) {
 	resp, err := (*kube.client).Get(podsPath)
 	if err != nil {
 		err = fmt.Errorf("failed to execute request against kubelet: %s ", err)
-		return []v1.Pod{}, err
+		return []corev1.Pod{}, err
 	}
 
-	var pods = &v1.PodList{}
+	pods := &corev1.PodList{}
 	err = json.Unmarshal(resp, pods)
 	if err != nil {
 		err = fmt.Errorf("failed to unmarshall result in to list of pods: %s", err)
@@ -75,12 +80,12 @@ func (kube *kubelet) getPods() ([]v1.Pod, error) {
 	return pods.Items, err
 }
 
-func filterByNamespace(allPods []v1.Pod, namespaces []string) []v1.Pod {
+func filterByNamespace(allPods []corev1.Pod, namespaces []string) []corev1.Pod {
 	if len(namespaces) == 0 {
 		return allPods
 	}
 
-	var result []v1.Pod
+	var result []corev1.Pod
 	for _, pod := range allPods {
 		if utils.Contains(namespaces, pod.Namespace) {
 			result = append(result, pod)
@@ -89,12 +94,12 @@ func filterByNamespace(allPods []v1.Pod, namespaces []string) []v1.Pod {
 	return result
 }
 
-func getContainers(clusterName string, nodeName string, pods []v1.Pod) []ContainerInfo {
+func getContainers(clusterName string, nodeName string, pods []corev1.Pod) []ContainerInfo {
 	var containers []ContainerInfo
 
 	for _, pod := range pods {
 
-		if pod.Status.Phase != v1.PodRunning {
+		if pod.Status.Phase != corev1.PodRunning {
 			continue
 		}
 
@@ -126,7 +131,7 @@ func getContainers(clusterName string, nodeName string, pods []v1.Pod) []Contain
 	return containers
 }
 
-func getPorts(pod v1.Pod, containerIndex int) PortsMap {
+func getPorts(pod corev1.Pod, containerIndex int) PortsMap {
 	ports := make(PortsMap)
 	if len(pod.Spec.Containers) > 0 &&
 		len(pod.Spec.Containers[containerIndex].Ports) > 0 {
@@ -149,11 +154,11 @@ func getClusterName() string {
 }
 
 func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout time.Duration) (Kubelet, error) {
-	config, err := rest.InClusterConfig()
+	restConfig, err := rest.InClusterConfig()
 	// not inside the cluster?
 	if err != nil {
 		kConfigPath := filepath.Join(utils.HomeDir(), ".kube", "config")
-		config, err = clientcmd.BuildConfigFromFlags("", kConfigPath)
+		restConfig, err = clientcmd.BuildConfigFromFlags("", kConfigPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster configuration: %s", err)
 		}
@@ -177,13 +182,13 @@ func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout tim
 
 	// host provided by cmd line arg has higher precedence.
 	// if host cmd line arg is not provided use NRK8S_NODE_NAME in case is set, otherwise localhost.
-	var kubeletHost = host
-	if isNodeNameSet && !configPkg.IsFlagPassed(configPkg.Host) {
+	kubeletHost := host
+	if isNodeNameSet && !config.IsFlagPassed(config.Host) {
 		kubeletHost = nodeName
 	}
 
 	hostUrl := makeUrl(kubeletHost, port, useTLS)
-	httpClient := http.NewClient(hostUrl, config.BearerToken)
+	httpClient := http.NewClient(hostUrl, restConfig.BearerToken)
 
 	kubelet := &kubelet{
 		client:      &httpClient,

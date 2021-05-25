@@ -1,6 +1,8 @@
 package utils
 
-import "os"
+import (
+	"os"
+)
 
 func Contains(set []string, str string) bool {
 	// a map may be faster

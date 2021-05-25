@@ -1,9 +1,10 @@
 package discovery
 
 import (
+	"strings"
+
 	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
-	"strings"
 )
 
 // Replacement defines actions to take to format entity name
@@ -13,8 +14,10 @@ type Replacement struct {
 	ReplaceField string `json:"replaceField"`
 }
 
-type VariablesMap map[string]interface{}
-type AnnotationsMap = VariablesMap
+type (
+	VariablesMap   map[string]interface{}
+	AnnotationsMap = VariablesMap
+)
 
 // DiscoveredItem defines the structure of a single item that has been "discovered"
 type DiscoveredItem struct {
@@ -47,11 +50,11 @@ func (d *Discoverer) Run() (Output, error) {
 }
 
 func processContainers(containers []kubernetes.ContainerInfo) Output {
-	//default empty, instead of nil
+	// default empty, instead of nil
 	output := Output{}
 	for _, c := range containers {
 		// new map for each container
-		var discoveredProperties = make(VariablesMap)
+		discoveredProperties := make(VariablesMap)
 
 		discoveredProperties[namespace] = c.Namespace
 		discoveredProperties[podName] = c.PodName
@@ -71,7 +74,7 @@ func processContainers(containers []kubernetes.ContainerInfo) Output {
 		for k, v := range c.PodAnnotations {
 			discoveredProperties[annotationPrefix+k] = v
 		}
-		//remove from discovered properties, k8s annotations
+		// remove from discovered properties, k8s annotations
 		metricAnnotations := filterAnnotations(discoveredProperties)
 
 		item := DiscoveredItem{
