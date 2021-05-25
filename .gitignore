@@ -6,6 +6,7 @@ coverage.xml
 *.heap
 bin
 deploy/gcp.yml
+vendor/
 
 # CICD
 dist/
