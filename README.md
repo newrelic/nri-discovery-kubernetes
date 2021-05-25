@@ -1,6 +1,6 @@
 [![Community Plus header](https://github.com/newrelic/opensource-website/raw/master/src/images/categories/Community_Plus.png)](https://opensource.newrelic.com/oss-category/#community-plus)
 
-# New Relic Kubernetes Auto-Discovery [![Build Status](https://travis-ci.org/newrelic/nri-discovery-kubernetes.svg?branch=master)](https://travis-ci.org/newrelic/nri-prometheus.svg?branch=master)[![CLA assistant](https://cla-assistant.io/readme/badge/newrelic/nri-discovery-kubernetes)](https://cla-assistant.io/newrelic/nri-discovery-kubernetes)
+# New Relic Kubernetes Auto-Discovery [![CLA assistant](https://cla-assistant.io/readme/badge/newrelic/nri-discovery-kubernetes)](https://cla-assistant.io/newrelic/nri-discovery-kubernetes)
 
 Automatically discovers containers running inside Kubernetes and returns a list of containers and their metadata in all namespaces by default. It can be configured to discover on specific namespaces only.
 
@@ -87,7 +87,7 @@ If you have any questions, or to execute our corporate CLA, required if your con
 
 **A note about vulnerabilities**
 
-As noted in our [security policy](/SECURITY.md), New Relic is committed to the privacy and security of our customers and their data. We believe that providing coordinated disclosure by security researchers and engaging with the security community are important means to achieve our security goals.
+As noted in our [security policy](../../security/policy), New Relic is committed to the privacy and security of our customers and their data. We believe that providing coordinated disclosure by security researchers and engaging with the security community are important means to achieve our security goals.
 
 If you believe you have found a security vulnerability in this project or any of New Relic's products or websites, we welcome and greatly appreciate you reporting it to New Relic through [HackerOne](https://hackerone.com/newrelic).
 
