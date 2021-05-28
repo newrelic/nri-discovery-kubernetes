@@ -9,8 +9,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/newrelic/nri-kubernetes/src/client"
-	kubeletclient "github.com/newrelic/nri-kubernetes/src/kubelet/client"
+	"github.com/newrelic/nri-kubernetes/v2/src/client"
+	kubeletclient "github.com/newrelic/nri-kubernetes/v2/src/kubelet/client"
 	"github.com/sirupsen/logrus"
 )
 
