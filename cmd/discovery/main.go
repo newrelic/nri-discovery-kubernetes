@@ -16,7 +16,11 @@ import (
 var integrationVersion = "dev"
 
 func main() {
-	config := config.NewConfig(integrationVersion)
+	config := config.Config{
+		Port: 28081,
+		Host: "192.168.183.14",
+		TLS:  false,
+	}
 
 	timeout := time.Duration(config.Timeout) * time.Millisecond
 	kubelet, err := kubernetes.NewKubelet(config.Host, config.Port, config.TLS, config.IsAutoConfig(), timeout)

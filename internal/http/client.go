@@ -37,7 +37,7 @@ func (c *httpClient) Get(path string) ([]byte, error) {
 	buff, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("httpClient buffer: '%s', Status %s", string(buff), resp.Status)
+		return nil, fmt.Errorf("httpClient buffer: %q, Status %s", string(buff), resp.Status)
 	}
 
 	return buff, nil
@@ -88,7 +88,7 @@ func (kc *kubeletClient) Get(path string) ([]byte, error) {
 	buff, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("kubeletClient buffer: '%s', Status %s", string(buff), resp.Status)
+		return nil, fmt.Errorf("kubeletClient buffer: %q, Status %s", string(buff), resp.Status)
 	}
 	return buff, nil
 }

@@ -96,6 +96,7 @@ jobs:
         with:
           minikube version: v1.20.0
           kubernetes version: ${{ matrix.k8sVersion }}
+          start args: '--embed-certs=true --extra-config=kubelet.read-only-port=10255'
       - name: Run Integration Tests
         env:
           MINIKUBE_HOME: '/home/runner/work/_temp'
