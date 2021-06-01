@@ -6,6 +6,7 @@
 package main_test
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"path/filepath"
@@ -38,6 +39,8 @@ func Test_discovery_when(t *testing.T) {
 
 	kubelet, err := kubernetes.NewKubelet(clusterURL.Hostname(), config.DefaultPort, false, false, time.Minute*5)
 	require.NoErrorf(t, err, "not expecting error when creating kubelet client")
+
+	ctx := contextWithDeadline(t)
 
 	t.Run("succeeds_with_no_namespace", func(t *testing.T) {
 		t.Parallel()
@@ -100,7 +103,7 @@ func Test_discovery_when(t *testing.T) {
 
 		pod := getPodIntegration()
 		pod.Spec.Containers[0].Image = "not-existing-image"
-		pod, err := k8sClient.CoreV1().Pods(ns.Name).Create(pod)
+		pod, err := k8sClient.CoreV1().Pods(ns.Name).Create(ctx, pod, metav1.CreateOptions{})
 		require.NoErrorf(t, err, "not expecting error when creating test pod")
 
 		discoverer := discovery.NewDiscoverer([]string{"not-existing"}, kubelet)
@@ -112,11 +115,13 @@ func Test_discovery_when(t *testing.T) {
 }
 
 func createRunningPod(t *testing.T, k8sClient *k8s.Clientset, namespace string) *corev1.Pod {
-	pod, err := k8sClient.CoreV1().Pods(namespace).Create(getPodIntegration())
+	ctx := contextWithDeadline(t)
+
+	pod, err := k8sClient.CoreV1().Pods(namespace).Create(ctx, getPodIntegration(), metav1.CreateOptions{})
 	require.NoErrorf(t, err, "not expecting error when creating test pod")
 
 	err = retry.Do(func() error {
-		pod, err = k8sClient.CoreV1().Pods(namespace).Get(pod.Name, metav1.GetOptions{})
+		pod, err = k8sClient.CoreV1().Pods(namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 		require.NoErrorf(t, err, "not expecting error getting pod")
 		if pod.Status.Phase != corev1.PodRunning {
 			return fmt.Errorf("the pod is still not running")
@@ -130,15 +135,17 @@ func createRunningPod(t *testing.T, k8sClient *k8s.Clientset, namespace string) 
 }
 
 func createTestNamespace(t *testing.T, k8sClient *k8s.Clientset) *corev1.Namespace {
-	ns, err := k8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{
+	ctx := contextWithDeadline(t)
+
+	ns, err := k8sClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-",
 		},
-	})
+	}, metav1.CreateOptions{})
 	require.NoErrorf(t, err, "not expecting error when creating test namespace")
 
 	t.Cleanup(func() {
-		err := k8sClient.CoreV1().Namespaces().Delete(ns.Name, &metav1.DeleteOptions{})
+		err := k8sClient.CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{})
 		require.NoErrorf(t, err, "not expecting error when cleaning environment")
 	},
 	)
@@ -189,4 +196,24 @@ func testPodIntegration(t *testing.T, resultToTest discovery.DiscoveredItem, pod
 	assert.Equal(t, pod.Name, resultToTest.Variables["podName"])
 	assert.Equal(t, pod.Status.PodIP, resultToTest.Variables["ip"])
 	assert.Equal(t, pod.Status.HostIP, resultToTest.Variables["nodeIP"])
+}
+
+const (
+	// Arbitrary amount of time to let tests exit cleanly before main process terminates.
+	timeoutGracePeriod = 10 * time.Second
+)
+
+func contextWithDeadline(t *testing.T) context.Context {
+	t.Helper()
+
+	deadline, ok := t.Deadline()
+	if !ok {
+		return context.Background()
+	}
+
+	ctx, cancel := context.WithDeadline(context.Background(), deadline.Truncate(timeoutGracePeriod))
+
+	t.Cleanup(cancel)
+
+	return ctx
 }
