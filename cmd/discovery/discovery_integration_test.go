@@ -21,7 +21,6 @@ import (
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/discovery"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
@@ -37,7 +36,7 @@ func Test_discovery_when(t *testing.T) {
 	clusterURL, err := url.Parse(cfg.Host)
 	require.NoErrorf(t, err, "not expecting error when waiting for the pod to be running")
 
-	kubelet, err := kubernetes.NewKubelet(clusterURL.Hostname(), config.DefaultPort, false, false, time.Minute*5)
+	kubelet, err := kubernetes.NewKubelet(clusterURL.Hostname(), 10250, true, false, time.Minute*5)
 	require.NoErrorf(t, err, "not expecting error when creating kubelet client")
 
 	ctx := contextWithDeadline(t)
