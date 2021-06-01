@@ -1,7 +1,6 @@
 package http
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -19,15 +18,13 @@ type HttpClient interface {
 }
 
 type httpClient struct {
-	token string
-	http  http.Client
-	url   url.URL
+	http http.Client
+	url  url.URL
 }
 
 func (c *httpClient) Get(path string) ([]byte, error) {
 	endpoint := c.url.String() + path
 	req, _ := http.NewRequest(http.MethodGet, endpoint, nil)
-	req.Header.Add("Authorization", "Bearer "+c.token)
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, err
@@ -43,16 +40,13 @@ func (c *httpClient) Get(path string) ([]byte, error) {
 	return buff, nil
 }
 
-func NewClient(url url.URL, token string) HttpClient {
+func NewClient(url url.URL, tr http.RoundTripper) HttpClient {
 	client := http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Transport: tr,
 	}
 	return &httpClient{
-		http:  client,
-		url:   url,
-		token: token,
+		http: client,
+		url:  url,
 	}
 }
 

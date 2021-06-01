@@ -188,7 +188,13 @@ func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout tim
 	}
 
 	hostUrl := makeUrl(kubeletHost, port, useTLS)
-	httpClient := http.NewClient(hostUrl, restConfig.BearerToken)
+
+	tr, err := rest.TransportFor(restConfig)
+	if err != nil {
+		return nil, fmt.Errorf("creating HTTP transport config from kubeconfig: %w", err)
+	}
+
+	httpClient := http.NewClient(hostUrl, tr)
 
 	kubelet := &kubelet{
 		client:      &httpClient,
