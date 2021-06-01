@@ -189,6 +189,9 @@ func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout tim
 
 	hostUrl := makeUrl(kubeletHost, port, useTLS)
 
+	// Allow kubelet to use self-signed serving certificate.
+	restConfig.Insecure = true
+
 	tr, err := rest.TransportFor(restConfig)
 	if err != nil {
 		return nil, fmt.Errorf("creating HTTP transport config from kubeconfig: %w", err)
