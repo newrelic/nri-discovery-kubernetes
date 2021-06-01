@@ -184,7 +184,7 @@ func fakeKubelet() kubernetes.Kubelet {
 	}
 
 	client := fakeHttpClient(podList)
-	k, _ := kubernetes.NewKubeletWithClient(&client)
+	k, _ := kubernetes.NewKubeletWithClient(client)
 	return k
 }
 
