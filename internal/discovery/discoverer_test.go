@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
-	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
 )
 
 func TestDiscoverer_Run(t *testing.T) {
