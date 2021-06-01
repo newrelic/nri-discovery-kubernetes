@@ -30,10 +30,13 @@ func Test_discovery_when(t *testing.T) {
 	cfg, err := clientcmd.BuildConfigFromFlags("", filepath.Join(utils.HomeDir(), ".kube", "config"))
 	require.NoErrorf(t, err, "not expecting error when building config from kubeconfig")
 
+	cfg.Insecure = true
+
 	k8sClient, err := k8s.NewForConfig(cfg)
 	require.NoErrorf(t, err, "not expecting error creating k8s client")
 
 	clusterURL, err := url.Parse(cfg.Host)
+
 	require.NoErrorf(t, err, "not expecting error when waiting for the pod to be running")
 
 	kubelet, err := kubernetes.NewKubelet(clusterURL.Hostname(), 10250, true, false, time.Minute*5)
