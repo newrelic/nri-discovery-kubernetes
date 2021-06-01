@@ -191,6 +191,8 @@ func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout tim
 
 	// Allow kubelet to use self-signed serving certificate.
 	restConfig.Insecure = true
+	restConfig.CAFile = ""
+	restConfig.CAData = nil
 
 	tr, err := rest.TransportFor(restConfig)
 	if err != nil {
