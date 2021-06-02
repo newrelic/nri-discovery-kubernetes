@@ -169,8 +169,11 @@ func getPodIntegration() *corev1.Pod {
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name:  "test-container",
+					Name: "test-container",
+					// Use full image name, so tests also pass when containerd is used as container runtime.
 					Image: "nginx:latest",
+					// Nginx require to run as root by default, so run unprivileged command instead.
+					Args: []string{"tail", "-f", "/dev/null"},
 				},
 			},
 		},
@@ -178,7 +181,10 @@ func getPodIntegration() *corev1.Pod {
 }
 
 func testPodIntegration(t *testing.T, resultToTest discovery.DiscoveredItem, pod *corev1.Pod) {
-	assert.Equal(t, pod.Spec.Containers[0].Image, resultToTest.MetricAnnotations["image"])
+	// Use contains for comparing the image, as containerd runtime will e.g. transform nginx:latest from pod spec
+	// to docker.io/library/nginx:latest.
+	assert.Contains(t, resultToTest.MetricAnnotations["image"], pod.Spec.Containers[0].Image, pod.Spec.Containers)
+
 	assert.Equal(t, pod.ObjectMeta.Annotations["key"], resultToTest.MetricAnnotations["label.key"])
 	assert.Equal(t, pod.ObjectMeta.Annotations["key2"], resultToTest.MetricAnnotations["label.key2"])
 	assert.Equal(t, pod.Spec.Containers[0].Name, resultToTest.MetricAnnotations["name"])
@@ -190,7 +196,7 @@ func testPodIntegration(t *testing.T, resultToTest discovery.DiscoveredItem, pod
 	assert.Equal(t, "k8s:${clusterName}:${namespace}:pod:${podName}:${name}", resultToTest.EntityRewrites[0].ReplaceField)
 
 	assert.Equal(t, pod.ObjectMeta.Annotations["key"], resultToTest.Variables["annotation.key"])
-	assert.Equal(t, pod.Spec.Containers[0].Image, resultToTest.Variables["image"])
+	assert.Contains(t, resultToTest.Variables["image"], pod.Spec.Containers[0].Image)
 	assert.Equal(t, pod.ObjectMeta.Labels["key"], resultToTest.Variables["label.key"])
 	assert.Equal(t, pod.ObjectMeta.Labels["key2"], resultToTest.Variables["label.key2"])
 	assert.Equal(t, pod.Name, resultToTest.Variables["podName"])
