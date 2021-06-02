@@ -3,7 +3,7 @@
 
 // +build integration
 
-package main_test
+package discovery_test
 
 import (
 	"context"
