@@ -193,6 +193,8 @@ func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout tim
 	restConfig.Insecure = true
 
 	// When Insecure == true, make sure no CA certificate is set, otherwise creating transport fails.
+	//
+	// https://github.com/kubernetes/client-go/blob/09dbda0b387fa7a9f71c5086e9f8f0529d7a0436/transport/transport.go#L66
 	restConfig.CAFile = ""
 	restConfig.CAData = nil
 
