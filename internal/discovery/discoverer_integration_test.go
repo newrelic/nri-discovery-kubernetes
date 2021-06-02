@@ -26,6 +26,8 @@ import (
 )
 
 func Test_discovery_when(t *testing.T) {
+	t.Parallel()
+
 	cfg, err := clientcmd.BuildConfigFromFlags("", filepath.Join(utils.HomeDir(), ".kube", "config"))
 	require.NoErrorf(t, err, "building config from kubeconfig")
 
@@ -41,101 +43,10 @@ func Test_discovery_when(t *testing.T) {
 
 	ctx := contextWithDeadline(t)
 
-	t.Run("succeeds_with_no_namespace", func(t *testing.T) {
-		t.Parallel()
+	nodes, err := k8sClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	require.NoErrorf(t, err, "listing nodes")
 
-		ns := createTestNamespace(t, k8sClient)
-		pod := createRunningPod(t, k8sClient, ns.Name)
-
-		discoverer := discovery.NewDiscoverer(nil, kubelet)
-		discovered, err := discoverer.Run()
-		require.NoErrorf(t, err, "running discovery with no namespaces")
-
-		var resultToTest discovery.DiscoveredItem
-		for _, d := range discovered {
-			if d.MetricAnnotations["podName"] == pod.Name {
-				resultToTest = d
-			}
-		}
-		require.NotEqualf(t, resultToTest, discovery.DiscoveredItem{}, "we expect resultToTest to be populated")
-		testPodIntegration(t, resultToTest, pod)
-	})
-
-	t.Run("succeeds_with_valid_namespace", func(t *testing.T) {
-		t.Parallel()
-
-		ns := createTestNamespace(t, k8sClient)
-		pod := createRunningPod(t, k8sClient, ns.Name)
-
-		discoverer := discovery.NewDiscoverer([]string{pod.Namespace}, kubelet)
-		discovered, err := discoverer.Run()
-		require.NoErrorf(t, err, "running discovery with valid namespaces")
-
-		var resultToTest discovery.DiscoveredItem
-		for _, d := range discovered {
-			if d.MetricAnnotations["podName"] == pod.Name {
-				resultToTest = d
-			}
-		}
-		require.Len(t, discovered, 1, "we are expecting only one pod")
-		require.NotEqualf(t, resultToTest, discovery.DiscoveredItem{}, "we expect resultToTest to be populated")
-		testPodIntegration(t, resultToTest, pod)
-	})
-
-	t.Run("succeeds_with_not_existing_namespace", func(t *testing.T) {
-		t.Parallel()
-
-		ns := createTestNamespace(t, k8sClient)
-		createRunningPod(t, k8sClient, ns.Name)
-
-		discoverer := discovery.NewDiscoverer([]string{"not-existing"}, kubelet)
-		discovered, err := discoverer.Run()
-		require.NoErrorf(t, err, "running discovery with not-existing namespaces")
-
-		require.Len(t, discovered, 0, "we are not expecting any element")
-	})
-
-	t.Run("succeeds_with_failing_pod", func(t *testing.T) {
-		t.Parallel()
-
-		ns := createTestNamespace(t, k8sClient)
-
-		pod := getPodIntegration()
-		pod.Spec.Containers[0].Image = "not-existing-image"
-		pod, err := k8sClient.CoreV1().Pods(ns.Name).Create(ctx, pod, metav1.CreateOptions{})
-		require.NoErrorf(t, err, "creating test pod")
-
-		discoverer := discovery.NewDiscoverer([]string{"not-existing"}, kubelet)
-		discovered, err := discoverer.Run()
-		require.NoErrorf(t, err, "running discovery with failing pods")
-
-		require.Len(t, discovered, 0, "we are not expecting any element, since failing pods should be ignored")
-	})
-}
-
-func createRunningPod(t *testing.T, k8sClient *k8s.Clientset, namespace string) *corev1.Pod {
-	ctx := contextWithDeadline(t)
-
-	pod, err := k8sClient.CoreV1().Pods(namespace).Create(ctx, getPodIntegration(), metav1.CreateOptions{})
-	require.NoErrorf(t, err, "creating test pod")
-
-	err = wait.PollImmediateUntil(time.Second, func() (bool, error) {
-		pod, err = k8sClient.CoreV1().Pods(namespace).Get(ctx, pod.Name, metav1.GetOptions{})
-		require.NoErrorf(t, err, "not expecting error getting pod")
-		if pod.Status.Phase != corev1.PodRunning {
-			t.Log("the pod is still not running")
-
-			return false, nil
-		}
-		return true, nil
-	}, ctx.Done())
-	require.NoErrorf(t, err, "waiting for the pod to be running")
-
-	return pod
-}
-
-func createTestNamespace(t *testing.T, k8sClient *k8s.Clientset) *corev1.Namespace {
-	ctx := contextWithDeadline(t)
+	require.Equalf(t, len(nodes.Items), 1, "expected only one Node on the cluster")
 
 	ns, err := k8sClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -146,15 +57,11 @@ func createTestNamespace(t *testing.T, k8sClient *k8s.Clientset) *corev1.Namespa
 
 	t.Cleanup(func() {
 		if err := k8sClient.CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}); err != nil {
-			t.Log("removing namespace %q: %v", ns.Name, err)
+			t.Logf("removing namespace %q: %v", ns.Name, err)
 		}
 	})
 
-	return ns
-}
-
-func getPodIntegration() *corev1.Pod {
-	return &corev1.Pod{
+	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-pod-",
 			Labels: map[string]string{
@@ -178,30 +85,60 @@ func getPodIntegration() *corev1.Pod {
 			},
 		},
 	}
-}
 
-func testPodIntegration(t *testing.T, resultToTest discovery.DiscoveredItem, pod *corev1.Pod) {
+	podClient := k8sClient.CoreV1().Pods(ns.Name)
+
+	pod, err = podClient.Create(ctx, pod, metav1.CreateOptions{})
+	require.NoErrorf(t, err, "creating test pod")
+
+	err = wait.PollImmediateUntil(time.Second, func() (bool, error) {
+		pod, err = podClient.Get(ctx, pod.Name, metav1.GetOptions{})
+		require.NoErrorf(t, err, "not expecting error getting pod")
+		if pod.Status.Phase != corev1.PodRunning {
+			t.Log("the pod is still not running")
+
+			return false, nil
+		}
+		return true, nil
+	}, ctx.Done())
+	require.NoErrorf(t, err, "waiting for the pod to be running")
+
+	discoverer := discovery.NewDiscoverer(nil, kubelet)
+	discoveredItems, err := discoverer.Run()
+	require.NoErrorf(t, err, "running discovery with no namespaces")
+
+	var desiredItem *discovery.DiscoveredItem
+
+	for _, item := range discoveredItems {
+		if item.MetricAnnotations["podName"] == pod.Name {
+			desiredItem = &item
+			break
+		}
+	}
+
+	require.NotNil(t, desiredItem, "expected discovered item not found")
+
 	// Use contains for comparing the image, as containerd runtime will e.g. transform nginx:latest from pod spec
 	// to docker.io/library/nginx:latest.
-	assert.Contains(t, resultToTest.MetricAnnotations["image"], pod.Spec.Containers[0].Image, pod.Spec.Containers)
+	assert.Contains(t, desiredItem.MetricAnnotations["image"], pod.Spec.Containers[0].Image)
 
-	assert.Equal(t, pod.ObjectMeta.Annotations["key"], resultToTest.MetricAnnotations["label.key"])
-	assert.Equal(t, pod.ObjectMeta.Annotations["key2"], resultToTest.MetricAnnotations["label.key2"])
-	assert.Equal(t, pod.Spec.Containers[0].Name, resultToTest.MetricAnnotations["name"])
-	assert.Equal(t, pod.Namespace, resultToTest.MetricAnnotations["namespace"])
+	assert.Equal(t, pod.ObjectMeta.Annotations["key"], desiredItem.MetricAnnotations["label.key"])
+	assert.Equal(t, pod.ObjectMeta.Annotations["key2"], desiredItem.MetricAnnotations["label.key2"])
+	assert.Equal(t, pod.Spec.Containers[0].Name, desiredItem.MetricAnnotations["name"])
+	assert.Equal(t, pod.Namespace, desiredItem.MetricAnnotations["namespace"])
 
-	require.Len(t, resultToTest.EntityRewrites, 1)
-	assert.Equal(t, "replace", resultToTest.EntityRewrites[0].Action)
-	assert.Equal(t, "${ip}", resultToTest.EntityRewrites[0].Match)
-	assert.Equal(t, "k8s:${clusterName}:${namespace}:pod:${podName}:${name}", resultToTest.EntityRewrites[0].ReplaceField)
+	require.Len(t, desiredItem.EntityRewrites, 1)
+	assert.Equal(t, "replace", desiredItem.EntityRewrites[0].Action)
+	assert.Equal(t, "${ip}", desiredItem.EntityRewrites[0].Match)
+	assert.Equal(t, "k8s:${clusterName}:${namespace}:pod:${podName}:${name}", desiredItem.EntityRewrites[0].ReplaceField)
 
-	assert.Equal(t, pod.ObjectMeta.Annotations["key"], resultToTest.Variables["annotation.key"])
-	assert.Contains(t, resultToTest.Variables["image"], pod.Spec.Containers[0].Image)
-	assert.Equal(t, pod.ObjectMeta.Labels["key"], resultToTest.Variables["label.key"])
-	assert.Equal(t, pod.ObjectMeta.Labels["key2"], resultToTest.Variables["label.key2"])
-	assert.Equal(t, pod.Name, resultToTest.Variables["podName"])
-	assert.Equal(t, pod.Status.PodIP, resultToTest.Variables["ip"])
-	assert.Equal(t, pod.Status.HostIP, resultToTest.Variables["nodeIP"])
+	assert.Equal(t, pod.ObjectMeta.Annotations["key"], desiredItem.Variables["annotation.key"])
+	assert.Contains(t, desiredItem.Variables["image"], pod.Spec.Containers[0].Image)
+	assert.Equal(t, pod.ObjectMeta.Labels["key"], desiredItem.Variables["label.key"])
+	assert.Equal(t, pod.ObjectMeta.Labels["key2"], desiredItem.Variables["label.key2"])
+	assert.Equal(t, pod.Name, desiredItem.Variables["podName"])
+	assert.Equal(t, pod.Status.PodIP, desiredItem.Variables["ip"])
+	assert.Equal(t, pod.Status.HostIP, desiredItem.Variables["nodeIP"])
 }
 
 const (
