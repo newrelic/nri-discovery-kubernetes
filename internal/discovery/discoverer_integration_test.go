@@ -7,17 +7,16 @@ package discovery_test
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"path/filepath"
 	"testing"
 	"time"
 
-	retry "github.com/avast/retry-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -28,17 +27,17 @@ import (
 
 func Test_discovery_when(t *testing.T) {
 	cfg, err := clientcmd.BuildConfigFromFlags("", filepath.Join(utils.HomeDir(), ".kube", "config"))
-	require.NoErrorf(t, err, "not expecting error when building config from kubeconfig")
+	require.NoErrorf(t, err, "building config from kubeconfig")
 
 	k8sClient, err := k8s.NewForConfig(cfg)
-	require.NoErrorf(t, err, "not expecting error creating k8s client")
+	require.NoErrorf(t, err, "creating k8s client")
 
 	clusterURL, err := url.Parse(cfg.Host)
 
-	require.NoErrorf(t, err, "not expecting error when waiting for the pod to be running")
+	require.NoErrorf(t, err, "waiting for the pod to be running")
 
 	kubelet, err := kubernetes.NewKubelet(clusterURL.Hostname(), 10250, true, false, time.Minute*5)
-	require.NoErrorf(t, err, "not expecting error when creating kubelet client")
+	require.NoErrorf(t, err, "creating kubelet client")
 
 	ctx := contextWithDeadline(t)
 
@@ -50,7 +49,7 @@ func Test_discovery_when(t *testing.T) {
 
 		discoverer := discovery.NewDiscoverer(nil, kubelet)
 		discovered, err := discoverer.Run()
-		require.NoErrorf(t, err, "not expecting error when running discovery with no namespaces")
+		require.NoErrorf(t, err, "running discovery with no namespaces")
 
 		var resultToTest discovery.DiscoveredItem
 		for _, d := range discovered {
@@ -70,7 +69,7 @@ func Test_discovery_when(t *testing.T) {
 
 		discoverer := discovery.NewDiscoverer([]string{pod.Namespace}, kubelet)
 		discovered, err := discoverer.Run()
-		require.NoErrorf(t, err, "not expecting error when running discovery with valid namespaces")
+		require.NoErrorf(t, err, "running discovery with valid namespaces")
 
 		var resultToTest discovery.DiscoveredItem
 		for _, d := range discovered {
@@ -91,7 +90,7 @@ func Test_discovery_when(t *testing.T) {
 
 		discoverer := discovery.NewDiscoverer([]string{"not-existing"}, kubelet)
 		discovered, err := discoverer.Run()
-		require.NoErrorf(t, err, "not expecting error when running discovery with not-existing namespaces")
+		require.NoErrorf(t, err, "running discovery with not-existing namespaces")
 
 		require.Len(t, discovered, 0, "we are not expecting any element")
 	})
@@ -104,11 +103,11 @@ func Test_discovery_when(t *testing.T) {
 		pod := getPodIntegration()
 		pod.Spec.Containers[0].Image = "not-existing-image"
 		pod, err := k8sClient.CoreV1().Pods(ns.Name).Create(ctx, pod, metav1.CreateOptions{})
-		require.NoErrorf(t, err, "not expecting error when creating test pod")
+		require.NoErrorf(t, err, "creating test pod")
 
 		discoverer := discovery.NewDiscoverer([]string{"not-existing"}, kubelet)
 		discovered, err := discoverer.Run()
-		require.NoErrorf(t, err, "not expecting error when running discovery with failing pods")
+		require.NoErrorf(t, err, "running discovery with failing pods")
 
 		require.Len(t, discovered, 0, "we are not expecting any element, since failing pods should be ignored")
 	})
@@ -118,18 +117,19 @@ func createRunningPod(t *testing.T, k8sClient *k8s.Clientset, namespace string) 
 	ctx := contextWithDeadline(t)
 
 	pod, err := k8sClient.CoreV1().Pods(namespace).Create(ctx, getPodIntegration(), metav1.CreateOptions{})
-	require.NoErrorf(t, err, "not expecting error when creating test pod")
+	require.NoErrorf(t, err, "creating test pod")
 
-	err = retry.Do(func() error {
+	err = wait.PollImmediateUntil(time.Second, func() (bool, error) {
 		pod, err = k8sClient.CoreV1().Pods(namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 		require.NoErrorf(t, err, "not expecting error getting pod")
 		if pod.Status.Phase != corev1.PodRunning {
-			return fmt.Errorf("the pod is still not running")
+			t.Log("the pod is still not running")
+
+			return false, nil
 		}
-		return nil
-	},
-	)
-	require.NoErrorf(t, err, "not expecting error when waiting for the pod to be running")
+		return true, nil
+	}, ctx.Done())
+	require.NoErrorf(t, err, "waiting for the pod to be running")
 
 	return pod
 }
@@ -142,13 +142,13 @@ func createTestNamespace(t *testing.T, k8sClient *k8s.Clientset) *corev1.Namespa
 			GenerateName: "test-",
 		},
 	}, metav1.CreateOptions{})
-	require.NoErrorf(t, err, "not expecting error when creating test namespace")
+	require.NoErrorf(t, err, "creating test namespace")
 
 	t.Cleanup(func() {
-		err := k8sClient.CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{})
-		require.NoErrorf(t, err, "not expecting error when cleaning environment")
-	},
-	)
+		if err := k8sClient.CoreV1().Namespaces().Delete(ctx, ns.Name, metav1.DeleteOptions{}); err != nil {
+			t.Log("removing namespace %q: %v", ns.Name, err)
+		}
+	})
 
 	return ns
 }
