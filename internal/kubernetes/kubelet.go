@@ -51,7 +51,7 @@ type Kubelet interface {
 }
 
 type kubelet struct {
-	client      *http.HttpClient
+	client      http.HttpClient
 	NodeName    string
 	ClusterName string
 }
@@ -66,7 +66,7 @@ func (kube *kubelet) FindContainers(namespaces []string) ([]ContainerInfo, error
 }
 
 func (kube *kubelet) getPods() ([]corev1.Pod, error) {
-	resp, err := (*kube.client).Get(podsPath)
+	resp, err := kube.client.Get(podsPath)
 	if err != nil {
 		err = fmt.Errorf("failed to execute request against kubelet: %s ", err)
 		return []corev1.Pod{}, err
@@ -172,7 +172,7 @@ func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout tim
 			logrus.WithError(err).Warn("failed to initialize kubelet client")
 		} else {
 			kubelet := &kubelet{
-				client:      &client,
+				client:      client,
 				NodeName:    nodeName,
 				ClusterName: clusterName,
 			}
@@ -191,7 +191,7 @@ func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout tim
 	httpClient := http.NewClient(hostUrl, restConfig.BearerToken)
 
 	kubelet := &kubelet{
-		client:      &httpClient,
+		client:      httpClient,
 		NodeName:    kubeletHost,
 		ClusterName: clusterName,
 	}
@@ -199,7 +199,7 @@ func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout tim
 	return kubelet, nil
 }
 
-func NewKubeletWithClient(httpClient *http.HttpClient) (Kubelet, error) {
+func NewKubeletWithClient(httpClient http.HttpClient) (Kubelet, error) {
 	k := &kubelet{
 		client: httpClient,
 	}

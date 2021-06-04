@@ -44,13 +44,12 @@ func (c *httpClient) Get(path string) ([]byte, error) {
 }
 
 func NewClient(url url.URL, token string) HttpClient {
-	client := http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
 	return &httpClient{
-		http:  client,
+		http: http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		},
 		url:   url,
 		token: token,
 	}
@@ -65,14 +64,17 @@ type kubeletClient struct {
 func NewKubeletClient(nodeName string, timeout time.Duration) (HttpClient, error) {
 	logger := logrus.New()
 	logger.SetOutput(os.Stderr)
+
 	d, err := kubeletclient.NewDiscoverer(nodeName, logger)
 	if err != nil {
 		return nil, err
 	}
+
 	client, err := d.Discover(timeout)
 	if err != nil {
 		return nil, err
 	}
+
 	return &kubeletClient{
 		client: client,
 	}, nil
@@ -90,5 +92,6 @@ func (kc *kubeletClient) Get(path string) ([]byte, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New(resp.Status)
 	}
+
 	return buff, nil
 }

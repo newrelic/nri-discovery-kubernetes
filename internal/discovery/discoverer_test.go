@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
-	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
 )
 
 func TestDiscoverer_Run(t *testing.T) {
@@ -64,9 +65,9 @@ func Test_PodsWithMultiplePorts_ReturnsIndexAndName(t *testing.T) {
 		kubelet:    fakeKubelet(),
 	}
 	result, err := d.Run()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.Len(t, result, 1)
+	require.Len(t, result, 1)
 	assert.NotEmpty(t, result[0].Variables)
 	assert.Contains(t, result[0].Variables, ports)
 
@@ -184,7 +185,7 @@ func fakeKubelet() kubernetes.Kubelet {
 	}
 
 	client := fakeHttpClient(podList)
-	k, _ := kubernetes.NewKubeletWithClient(&client)
+	k, _ := kubernetes.NewKubeletWithClient(client)
 	return k
 }
 
