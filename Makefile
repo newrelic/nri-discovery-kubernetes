@@ -6,10 +6,9 @@ PROJECT      := nri-discovery-kubernetes
 BINARY_NAME   = $(PROJECT)
 IMAGE_NAME   ?= newrelic/nri-discovery-kubernetes
 GOPATH := $(shell go env GOPATH)
-GORELEASER_VERSION := v0.155.0
+GORELEASER_VERSION := v0.168.0
 GORELEASER_BIN ?= bin/goreleaser
-GOLANGCILINT_VERSION = v1.36.0
-GOLANGCI_LINT_BIN = bin/golangci-lint
+GOLANGCI_LINT_BIN = golangci-lint
 
 all: build
 
@@ -20,21 +19,13 @@ clean:
 	@rm -rfv bin
 	@rm -rfv target
 
-tools: bin check-version tools-golangci-lint
-	@echo "=== $(PROJECT) === [ tools ]: Installing tools required by the project..."
-
-$(GOLANGCI_LINT_BIN):
-	@echo "installing GolangCI lint"
-	@(wget -qO - https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s $(GOLANGCILINT_VERSION) )
-
-tools-golangci-lint: $(GOLANGCI_LINT_BIN)
+tools: check-version
+	@which $(GOLANGCI_LINT_BIN) || echo "golangci-lint not found in PATH" >&2 && exit 1
 
 fmt:
 	@go fmt ./...
 
-deps: tools deps-only
-
-deps-only:
+deps:
 	@echo "=== $(PROJECT) === [ deps ]: Installing package dependencies required by the project..."
 	@go mod download
 

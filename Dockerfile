@@ -1,11 +1,9 @@
-FROM golang:1.15.2-alpine3.13 AS build
+FROM golang:1.16-alpine AS build
 RUN apk add --no-cache --update git make
 
 WORKDIR /go/src/github.com/newrelic/nri-discovery-kubernetes
 # cache dependencies
-COPY go.mod .
-COPY go.sum .
-COPY Makefile Makefile
+COPY go.mod go.sum Makefile ./
 RUN make deps
 COPY . .
 RUN make compile-only

@@ -11,21 +11,24 @@ env:
   TAG: "v0.0.0" # needed for goreleaser windows builds
   REPO_FULL_NAME: ${{ github.event.repository.full_name }}
   ORIGINAL_REPO_NAME: "newrelic/nri-discovery-kubernetes"
-  GO_VERSION: '1.15.2'
+  GO_VERSION: '1.16'
 
 jobs:
-  validate:
-    name: Validate code via linters
+  static-analysis:
+    name: Run all static analysis
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
+      - uses: newrelic/newrelic-infra-checkers@v1
+      - name: Semgrep
+        uses: returntocorp/semgrep-action@v1
         with:
-          username: ${{ secrets.OHAI_DOCKER_HUB_ID }}
-          password: ${{ secrets.OHAI_DOCKER_HUB_PASSWORD }}
-      - name: Validate code
-        run: make ci/validate
+          auditOn: push
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        continue-on-error: ${{ github.event_name != 'pull_request' }}
+        with:
+          only-new-issues: true
 
   snyk:
     name: Run security checks via snyk
