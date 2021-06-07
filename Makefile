@@ -46,6 +46,9 @@ test: deps
 	@echo "=== $(PROJECT) === [ test ]: Running unit tests..."
 	@go test -race ./...
 
+test-integration: ## Runs all integration tests. Expects kubeconfig pointing to cluster with single node.
+	@go test -tags integration ./...
+
 test/skaffold:
 	@skaffold dev -f ./deploy/skaffold.yaml
 
