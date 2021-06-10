@@ -1,6 +1,6 @@
 [![Community Plus header](https://github.com/newrelic/opensource-website/raw/master/src/images/categories/Community_Plus.png)](https://opensource.newrelic.com/oss-category/#community-plus)
 
-# New Relic Kubernetes Auto-Discovery [![CLA assistant](https://cla-assistant.io/readme/badge/newrelic/nri-discovery-kubernetes)](https://cla-assistant.io/newrelic/nri-discovery-kubernetes)
+# New Relic Kubernetes Auto-Discovery
 
 Automatically discovers containers running inside Kubernetes and returns a list of containers and their metadata in all namespaces by default. It can be configured to discover on specific namespaces only.
 
