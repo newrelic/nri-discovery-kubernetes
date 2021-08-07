@@ -9,7 +9,7 @@ COPY . .
 RUN make compile-only
 RUN chmod +x ./bin/nri-discovery-kubernetes
 
-FROM alpine:latest
+FROM alpine:3
 RUN apk add --no-cache ca-certificates
 
 USER nobody
