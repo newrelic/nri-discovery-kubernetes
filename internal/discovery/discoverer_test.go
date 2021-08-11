@@ -184,20 +184,20 @@ func fakeKubelet() kubernetes.Kubelet {
 		Items:    []corev1.Pod{pod1, pod2},
 	}
 
-	client := fakeHttpClient(podList)
+	client := fakeHTTPClient(podList)
 	k, _ := kubernetes.NewKubeletWithClient(client)
 	return k
 }
 
-func fakeHttpClient(pods corev1.PodList) http.HttpClient {
-	return &FakeHttpClient{pods: pods}
+func fakeHTTPClient(pods corev1.PodList) http.Client {
+	return &FakeHTTPClient{pods: pods}
 }
 
-type FakeHttpClient struct {
+type FakeHTTPClient struct {
 	pods corev1.PodList
 }
 
-func (k *FakeHttpClient) Get(path string) ([]byte, error) {
+func (k *FakeHTTPClient) Get(path string) ([]byte, error) {
 	return json.Marshal(k.pods)
 }
 
