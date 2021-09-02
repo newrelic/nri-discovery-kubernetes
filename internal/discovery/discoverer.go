@@ -15,7 +15,9 @@ type Replacement struct {
 }
 
 type (
-	VariablesMap   map[string]interface{}
+	// VariablesMap is used to store discovery properties.
+	VariablesMap map[string]interface{}
+	// AnnotationsMap is used to discovered annotations.
 	AnnotationsMap = VariablesMap
 )
 

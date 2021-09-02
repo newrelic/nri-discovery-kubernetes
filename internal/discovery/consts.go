@@ -1,5 +1,6 @@
 package discovery
 
+// Property represents a discovery field.
 type Property = string
 
 const (

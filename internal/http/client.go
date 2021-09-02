@@ -13,7 +13,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type HttpClient interface {
+// Client represents functionality of simple HTTP client.
+type Client interface {
 	Get(path string) ([]byte, error)
 }
 
@@ -30,7 +31,12 @@ func (c *httpClient) Get(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			logrus.WithError(err).Warn("closing response body")
+		}
+	}()
+
 	buff, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
@@ -40,7 +46,8 @@ func (c *httpClient) Get(path string) ([]byte, error) {
 	return buff, nil
 }
 
-func NewClient(url url.URL, tr http.RoundTripper) HttpClient {
+// NewClient constructs new simple HTTP client with given base URL.
+func NewClient(url url.URL, tr http.RoundTripper) Client {
 	return &httpClient{
 		http: http.Client{
 			Transport: tr,
@@ -55,7 +62,7 @@ type kubeletClient struct {
 }
 
 // NewKubeletClient creates a new kubeletClient instance.
-func NewKubeletClient(nodeName string, timeout time.Duration) (HttpClient, error) {
+func NewKubeletClient(nodeName string, timeout time.Duration) (Client, error) {
 	logger := logrus.New()
 	logger.SetOutput(os.Stderr)
 
@@ -80,7 +87,12 @@ func (kc *kubeletClient) Get(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			logrus.WithError(err).Warn("closing response body")
+		}
+	}()
+
 	buff, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {

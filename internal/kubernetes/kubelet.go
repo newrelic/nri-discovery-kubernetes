@@ -25,11 +25,15 @@ const (
 )
 
 type (
-	PortsMap       map[string]int32
-	LabelsMap      map[string]string
+	// PortsMap stores container ports indexed by name.
+	PortsMap map[string]int32
+	// LabelsMap stores Pod labels.
+	LabelsMap map[string]string
+	// AnnotationsMap stores Pod annotations.
 	AnnotationsMap map[string]string
 )
 
+// ContainerInfo represents discovery-specific format for found Pods via Kubelet API.
 type ContainerInfo struct {
 	Name           string
 	ID             string
@@ -46,12 +50,13 @@ type ContainerInfo struct {
 	Cluster        string
 }
 
+// Kubelet defines what functionality kubelet client provides.
 type Kubelet interface {
 	FindContainers(namespaces []string) ([]ContainerInfo, error)
 }
 
 type kubelet struct {
-	client      http.HttpClient
+	client      http.Client
 	NodeName    string
 	ClusterName string
 }
@@ -153,6 +158,7 @@ func getClusterName() string {
 	return clusterName
 }
 
+// NewKubelet validates and constructs Kubelet client.
 func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout time.Duration) (Kubelet, error) {
 	restConfig, err := rest.InClusterConfig()
 	// not inside the cluster?
@@ -187,7 +193,7 @@ func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout tim
 		kubeletHost = nodeName
 	}
 
-	hostUrl := makeUrl(kubeletHost, port, useTLS)
+	hostURL := makeURL(kubeletHost, port, useTLS)
 
 	// Allow kubelet to use self-signed serving certificate.
 	restConfig.Insecure = true
@@ -203,7 +209,7 @@ func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout tim
 		return nil, fmt.Errorf("creating HTTP transport config from kubeconfig: %w", err)
 	}
 
-	httpClient := http.NewClient(hostUrl, tr)
+	httpClient := http.NewClient(hostURL, tr)
 
 	kubelet := &kubelet{
 		client:      httpClient,
@@ -214,7 +220,8 @@ func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout tim
 	return kubelet, nil
 }
 
-func NewKubeletWithClient(httpClient http.HttpClient) (Kubelet, error) {
+// NewKubeletWithClient constructs Kubelet client with given HTTP client.
+func NewKubeletWithClient(httpClient http.Client) (Kubelet, error) {
 	k := &kubelet{
 		client: httpClient,
 	}
@@ -222,14 +229,14 @@ func NewKubeletWithClient(httpClient http.HttpClient) (Kubelet, error) {
 	return k, nil
 }
 
-func makeUrl(host string, port int, useTLS bool) url.URL {
+func makeURL(host string, port int, useTLS bool) url.URL {
 	scheme := "http"
 	if useTLS {
 		scheme = "https"
 	}
-	kubeletUrl := url.URL{
+	kubeletURL := url.URL{
 		Scheme: scheme,
 		Host:   host + ":" + strconv.Itoa(port),
 	}
-	return kubeletUrl
+	return kubeletURL
 }

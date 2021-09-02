@@ -8,16 +8,21 @@ import (
 )
 
 const (
+	// Host is a Kubelet host flag name.
+	Host = "host"
+
+	// DefaultHost is default address where discovery will look for Kubelet API.
+	DefaultHost = "localhost"
+
+	// DefaultPort is default port user for Kubelet API.
+	DefaultPort = 10255
+
 	namespaces = "namespaces"
 	port       = "port"
-	Host       = "host"
 	insecure   = "insecure"
 	timeout    = "timeout"
 	tls        = "tls"
 	envPrefix  = "NRIA"
-
-	DefaultHost = "localhost"
-	DefaultPort = 10255
 )
 
 var (
@@ -25,6 +30,7 @@ var (
 	_ = flag.Bool(insecure, false, `(optional, default false, deprecated) Use insecure (non-ssl) connection.
 For backwards compatibility this flag takes precedence over 'tls')`)
 )
+
 var (
 	_ = flag.Int(timeout, 5000, "(optional, default 5000) timeout in ms")
 	_ = flag.Bool(tls, false, "(optional, default false) Use secure (tls) connection")
@@ -64,6 +70,7 @@ func (c *Config) IsAutoConfig() bool {
 	return !IsFlagPassed(Host) && !IsFlagPassed(port) && !IsFlagPassed(tls)
 }
 
+// NewConfig generates Config from flags.
 func NewConfig(version string) Config {
 	flag.Parse()
 
