@@ -7,7 +7,7 @@ team.
 ## How to contribute
 
 - Read this CONTRIBUTING file.
-- Read our [Code of Conduct](./CODE_OF_CONDUCT.md).
+- Read our [Code of Conduct](https://opensource.newrelic.com/code-of-conduct/).
 - Run Tests.
 - Submit a PR.
 - *Ensure you’ve signed the CLA, otherwise you’ll be asked to do so.*
