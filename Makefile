@@ -8,19 +8,15 @@ IMAGE_NAME   ?= newrelic/nri-discovery-kubernetes
 GOPATH := $(shell go env GOPATH)
 GORELEASER_VERSION := v0.168.0
 GORELEASER_BIN ?= bin/goreleaser
-GOLANGCI_LINT_BIN = golangci-lint
 
 all: build
 
-build: check-version clean validate test compile
+build: check-version clean test compile
 
 clean:
 	@echo "=== $(PROJECT) === [ clean ]: Removing binaries and coverage file..."
 	@rm -rfv bin
 	@rm -rfv target
-
-tools: check-version
-	@which $(GOLANGCI_LINT_BIN) || echo "golangci-lint not found in PATH" >&2 && exit 1
 
 fmt:
 	@go fmt ./...
@@ -28,11 +24,6 @@ fmt:
 deps:
 	@echo "=== $(PROJECT) === [ deps ]: Installing package dependencies required by the project..."
 	@go mod download
-
-validate: deps
-	@echo "=== $(PROJECT) === [ validate ]: Validating source code running golangci-lint..."
-	@${GOLANGCI_LINT_BIN} --version
-	@${GOLANGCI_LINT_BIN} run
 
 compile: deps
 	@echo "=== $(PROJECT) === [ compile ]: Building $(BINARY_NAME)..."
@@ -71,4 +62,4 @@ endif
 include $(CURDIR)/build/ci.mk
 include $(CURDIR)/build/release.mk
 
-.PHONY: all fmt build clean tools tools-update deps deps-only validate compile compile-only test check-version tools-golangci-lint docker-build release release/deps release/test docker-release
+.PHONY: all fmt build clean tools tools-update deps deps-only compile compile-only test check-version docker-build release release/deps release/test snyk snyk/monitor docker-release
