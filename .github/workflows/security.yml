@@ -10,7 +10,6 @@ on:
     - cron: "0 3 * * *"
 
 jobs:
-  # Note: Snyk SaaS is already configured for this repository, which does not need a workflow to run
   trivy:
     name: Trivy security scan
     runs-on: ubuntu-latest
