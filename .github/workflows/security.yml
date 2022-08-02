@@ -10,7 +10,6 @@ on:
     - cron: "0 3 * * *"
 
 jobs:
-  # Note: Snyk SaaS is already configured for this repository, which does not need a workflow to run
   trivy:
     name: Trivy security scan
     runs-on: ubuntu-latest
@@ -25,7 +24,7 @@ jobs:
           scan-type: fs
           ignore-unfixed: true
           exit-code: 1
-          severity: 'HIGH,CRITICAL'
+          severity: 'CRITICAL'
 
       - name: Run Trivy vulnerability scanner sarif output
         uses: aquasecurity/trivy-action@master
@@ -33,7 +32,7 @@ jobs:
         with:
           scan-type: fs
           ignore-unfixed: true
-          severity: 'HIGH,CRITICAL'
+          severity: 'CRITICAL'
           format: 'template'
           template: '@/contrib/sarif.tpl'
           output: 'trivy-results.sarif'

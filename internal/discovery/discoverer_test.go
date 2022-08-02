@@ -90,9 +90,8 @@ func fakeKubelet() kubernetes.Kubelet {
 	pod1 := corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        "test",
-			Namespace:   "test",
-			ClusterName: "test",
+			Name:      "test",
+			Namespace: "test",
 			Labels: map[string]string{
 				"team": "caos",
 			},
@@ -139,9 +138,8 @@ func fakeKubelet() kubernetes.Kubelet {
 	pod2 := corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        "fake",
-			Namespace:   "fake",
-			ClusterName: "fake",
+			Name:      "fake",
+			Namespace: "fake",
 			Labels: map[string]string{
 				"team": "caos",
 			},
