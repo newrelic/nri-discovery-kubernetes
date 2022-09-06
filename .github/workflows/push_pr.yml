@@ -11,7 +11,7 @@ env:
   TAG: "v0.0.0" # needed for goreleaser windows builds
   REPO_FULL_NAME: ${{ github.event.repository.full_name }}
   ORIGINAL_REPO_NAME: "newrelic/nri-discovery-kubernetes"
-  GO_VERSION: '1.18'
+  GO_VERSION: '1.19'
 
 jobs:
   static-analysis:
