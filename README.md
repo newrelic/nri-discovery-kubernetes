@@ -12,19 +12,9 @@ This integration requires a Kubernetes cluster available to deploy and run. For 
 
 Currently, tests are totally isolated and you don't need a cluster to run them.
 
-### Requirements
-
-1. **Go 1.13**. This project uses [go modules](https://github.com/golang/go/wiki/Modules), which makes it incompatible with previous Go versions.
-
-   It can work with **Go 1.11** but you will need to set **GO111MODULE=on**.
-
-2. Ensure you've added `$GOPATH/bin` to your `$PATH`, otherwise builds won't be possible.
-
-If you want to learn more about GOPATH, check the [official Go docs](https://golang.org/doc/code.html#GOPATH).
-
 ### Testing
 
-You can run the linters with `make validate` and the tests with `make test`.
+You can run tests with `make test`.
 
 ### Building
 

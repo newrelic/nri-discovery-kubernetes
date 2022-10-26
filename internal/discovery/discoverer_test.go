@@ -2,6 +2,9 @@ package discovery
 
 import (
 	"encoding/json"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
+	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,8 +13,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
-	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/kubelet"
 )
 
 func TestDiscoverer_Run(t *testing.T) {
@@ -47,7 +49,7 @@ func TestDiscoverer_Run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			d := &Discoverer{
 				namespaces: tt.fields.namespaces,
-				kubelet:    fakeKubelet(),
+				kubelet:    k.kubelet,
 			}
 			got, err := d.Run()
 			if (err != nil) != tt.wantErr {
@@ -62,7 +64,7 @@ func TestDiscoverer_Run(t *testing.T) {
 func Test_PodsWithMultiplePorts_ReturnsIndexAndName(t *testing.T) {
 	d := &Discoverer{
 		namespaces: []string{"test"},
-		kubelet:    fakeKubelet(),
+		kubelet:    k.kubelet,
 	}
 	result, err := d.Run()
 	require.NoError(t, err)
@@ -72,7 +74,7 @@ func Test_PodsWithMultiplePorts_ReturnsIndexAndName(t *testing.T) {
 	assert.Contains(t, result[0].Variables, ports)
 
 	// assert correct type
-	p := result[0].Variables[ports].(kubernetes.PortsMap)
+	p := result[0].Variables[ports].(kubelet.PortsMap)
 	assert.NotEmpty(t, p)
 
 	assert.Contains(t, p, "0")
@@ -86,7 +88,7 @@ func Test_PodsWithMultiplePorts_ReturnsIndexAndName(t *testing.T) {
 	assert.EqualValues(t, p["2"], p["third"])
 }
 
-func fakeKubelet() kubernetes.Kubelet {
+func fakeKubelet() kubelet.Kubelet {
 	pod1 := corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -183,7 +185,7 @@ func fakeKubelet() kubernetes.Kubelet {
 	}
 
 	client := fakeHTTPClient(podList)
-	k, _ := kubernetes.NewKubeletWithClient(client)
+	k, _ := kubelet.New(client)
 	return k
 }
 
@@ -199,6 +201,16 @@ func (k *FakeHTTPClient) Get(path string) ([]byte, error) {
 	return json.Marshal(k.pods)
 }
 
+func getTestData() *http.Client {
+	t.Helper()
+
+	requestsReceived := map[string]*http.Request{}
+	l := sync.Mutex{}
+
+	testServer := httptest.NewServer(handler(&l, "http", requestsReceived, endpoints))
+
+}
+
 func items() map[string]DiscoveredItem {
 	items := map[string]DiscoveredItem{
 		"test": {
@@ -209,7 +221,7 @@ func items() map[string]DiscoveredItem {
 				namespace:                 "test",
 				podName:                   "test",
 				ip:                        "127.0.0.1",
-				ports:                     kubernetes.PortsMap{"0": 1, "1": 2, "2": 3, "first": 1, "third": 3},
+				ports:                     kubelet.PortsMap{"0": 1, "1": 2, "2": 3, "first": 1, "third": 3},
 				name:                      "test",
 				id:                        "testID",
 				image:                     "testImage",
@@ -241,7 +253,7 @@ func items() map[string]DiscoveredItem {
 				namespace:                 "fake",
 				podName:                   "fake",
 				ip:                        "127.0.0.2",
-				ports:                     kubernetes.PortsMap{"0": 1},
+				ports:                     kubelet.PortsMap{"0": 1},
 				name:                      "fake",
 				id:                        "fakeID",
 				image:                     "fakeImage",

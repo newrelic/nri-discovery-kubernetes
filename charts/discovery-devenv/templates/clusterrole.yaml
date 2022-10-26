@@ -1,0 +1,37 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "discovery-devenv.fullname" . }}
+  labels:
+    {{- include "discovery-devenv.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources:
+      - "nodes/metrics"
+      - "nodes/stats"
+      - "nodes/proxy"
+    verbs: ["get", "list"]
+  - apiGroups: [ "" ]
+    resources:
+      - "endpoints"
+      - "services"
+      - "nodes"
+      - "namespaces"
+    verbs: [ "get", "list", "watch" ]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "discovery-devenv.fullname" . }}
+  labels:
+    {{- include "discovery-devenv.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "discovery-devenv.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "discovery-devenv.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}

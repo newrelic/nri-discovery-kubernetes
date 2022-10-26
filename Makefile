@@ -48,12 +48,12 @@ test/skaffold/gcp:
 
 check-version:
 ifdef GOOS
-ifneq ("$(GOOS)" "$(NATIVEOS)")
+ifneq ("$(GOOS)", "$(NATIVEOS)")
 	$(error GOOS is not $(NATIVEOS). Cross-compiling is only allowed for 'clean', 'deps-only' and 'compile-only' targets)
 endif
 endif
 ifdef GOARCH
-ifneq ("$(GOARCH)" "$(NATIVEARCH)")
+ifneq ("$(GOARCH)", "$(NATIVEARCH)")
 	$(error GOARCH variable is not $(NATIVEARCH). Cross-compiling is only allowed for 'clean', 'deps-only' and 'compile-only' targets)
 endif
 endif

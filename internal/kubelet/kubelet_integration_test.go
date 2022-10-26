@@ -1,12 +1,14 @@
 // Copyright 2021 New Relic Corporation. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build integration
 // +build integration
 
 package kubernetes_test
 
 import (
 	"context"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
 	"net/url"
 	"path/filepath"
 	"testing"
@@ -20,7 +22,7 @@ import (
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/kubelet"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
 )
 
@@ -152,7 +154,7 @@ func Test_Kubelet_client_expects_pod_container_statuses_to_have_populated(t *tes
 	})
 }
 
-func singleNodeClusterKubelet(t *testing.T) (kubernetes.Kubelet, *k8s.Clientset) {
+func singleNodeClusterKubelet(t *testing.T) (kubelet.Kubelet, *k8s.Clientset) {
 	t.Helper()
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", filepath.Join(utils.HomeDir(), ".kube", "config"))
@@ -169,13 +171,14 @@ func singleNodeClusterKubelet(t *testing.T) (kubernetes.Kubelet, *k8s.Clientset)
 	clusterURL, err := url.Parse(cfg.Host)
 	require.NoErrorf(t, err, "parsing API URL")
 
-	kubeletHost := clusterURL.Hostname()
-	kubeletPort := 10250
-	useTLS := true
-	autoConfig := false
-	discoveryTimeout := 5 * time.Minute
+	conf := &config.Config{
+		Port:    10250,
+		Host:    clusterURL.Hostname(),
+		TLS:     true,
+		Timeout: 5 * 60 * 1000, // 5 minutes in miliseconds
 
-	kubelet, err := kubernetes.NewKubelet(kubeletHost, kubeletPort, useTLS, autoConfig, discoveryTimeout)
+	}
+	kubelet, err := kubelet.New(conf)
 	require.NoErrorf(t, err, "creating kubelet client")
 
 	return kubelet, clientset
@@ -183,7 +186,7 @@ func singleNodeClusterKubelet(t *testing.T) (kubernetes.Kubelet, *k8s.Clientset)
 
 const (
 	// Arbitrary amount of time to let tests exit cleanly before main process terminates.
-	timeoutGracePeriod = 10 * time.Second
+	timeoutGracePeriod = 200 * time.Millisecond
 	testPrefix         = "test-"
 )
 
