@@ -6,14 +6,8 @@ import (
 	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
-	"github.com/sirupsen/logrus"
 	"io"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
-	"path"
 	"strconv"
 )
 
@@ -156,51 +150,10 @@ func getPorts(pod corev1.Pod, containerIndex int) PortsMap {
 }
 
 // New validates and constructs Kubelet client.
-func New(config *config.Config) (Kubelet, error) {
-	k8sConfig, err := getK8sConfig(config)
-	if err != nil {
-		return nil, fmt.Errorf("setting kubernetes configuration: %w", err)
-	}
-
-	k8s, err := kubernetes.NewForConfig(k8sConfig)
-	if err != nil {
-		return nil, fmt.Errorf("building kubernetes client: %w", err)
-	}
-
-	connector := http.DefaultConnector(k8s, config, k8sConfig)
-
-	kubeletClient, err := http.New(connector, http.WithMaxRetries(5)) // TODO: Retries are hardcoded
-	if err != nil {
-		return nil, fmt.Errorf("building kubelet client: %w", err)
-	}
-
-	k := kubelet{
-		client:      kubeletClient,
+func New(client *http.Client, config *config.Config) Kubelet {
+	return &kubelet{
+		client:      client,
 		ClusterName: config.ClusterName,
 		NodeName:    config.NodeName,
 	}
-
-	return &k, nil
-}
-
-func getK8sConfig(c *config.Config) (*rest.Config, error) {
-	inclusterConfig, err := rest.InClusterConfig()
-	if err == nil {
-		return inclusterConfig, nil
-	}
-	logrus.Warnf("collecting in cluster config: %v", err)
-
-	kubeconf := c.KubeConfigFile
-	if kubeconf == "" {
-		kubeconf = path.Join(homedir.HomeDir(), ".kube", "config")
-	}
-
-	inclusterConfig, err = clientcmd.BuildConfigFromFlags("", kubeconf)
-	if err != nil {
-		return nil, fmt.Errorf("could not load local kube config: %w", err)
-	}
-
-	logrus.Warnf("using local kube config: %q", kubeconf)
-
-	return inclusterConfig, nil
 }

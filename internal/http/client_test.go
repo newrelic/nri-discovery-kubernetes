@@ -37,7 +37,7 @@ const (
 func TestClientCalls(t *testing.T) {
 	s, requests := testHTTPServerWithEndpoints(t, []string{healthz, prometheusMetric, kubeletMetric})
 
-	k8sClient, cf, inClusterConfig := GetTestData(s)
+	k8sClient, cf, inClusterConfig := getTestData(s)
 
 	kubeletClient, err := internalhttp.New(
 		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig),
@@ -73,7 +73,7 @@ func TestClientCallsViaAPIProxy(t *testing.T) {
 		[]string{path.Join(apiProxy, healthz), path.Join(apiProxy, prometheusMetric), path.Join(apiProxy, kubeletMetric)},
 	)
 
-	k8sClient, cf, inClusterConfig := GetTestData(s)
+	k8sClient, cf, inClusterConfig := getTestData(s)
 	cf.Host = "invalid" // disabling local connection
 
 	kubeletClient, err := internalhttp.New(
@@ -115,7 +115,7 @@ func TestConfigPrecedence(t *testing.T) {
 		t.Parallel()
 
 		s, _ := testHTTPServerWithEndpoints(t, []string{healthz, prometheusMetric, kubeletMetric})
-		_, cf, inClusterConfig := GetTestData(s)
+		_, cf, inClusterConfig := getTestData(s)
 
 		// We use an empty client, but the connector is retrieving the port from the config.
 		k8sClient := fake.NewSimpleClientset()
@@ -136,7 +136,7 @@ func TestClientFailingProbingHTTP(t *testing.T) {
 
 	s, requests := testHTTPServerWithEndpoints(t, []string{})
 
-	c, cf, inClusterConfig := GetTestData(s)
+	c, cf, inClusterConfig := getTestData(s)
 
 	_, err := internalhttp.New(
 		internalhttp.DefaultConnector(c, cf, inClusterConfig),
@@ -174,7 +174,7 @@ func TestClientFailingProbingHTTPS(t *testing.T) {
 
 	s, requests := testHTTPSServerWithEndpoints(t, []string{})
 
-	c, cf, inClusterConfig := GetTestData(s)
+	c, cf, inClusterConfig := getTestData(s)
 	cf.TLS = true
 
 	_, err := internalhttp.New(
@@ -229,7 +229,7 @@ func TestClientTimeoutAndRetries(t *testing.T) {
 		},
 	))
 
-	c, cf, inClusterConfig := GetTestData(s)
+	c, cf, inClusterConfig := getTestData(s)
 
 	cf.Timeout = timeout
 
@@ -255,7 +255,7 @@ func TestClientOptions(t *testing.T) {
 
 	s, _ := testHTTPServerWithEndpoints(t, []string{healthz, prometheusMetric, kubeletMetric})
 
-	k8sClient, cf, inClusterConfig := GetTestData(s)
+	k8sClient, cf, inClusterConfig := getTestData(s)
 
 	_, err := internalhttp.New(
 		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig),
@@ -265,7 +265,7 @@ func TestClientOptions(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func GetTestData(s *httptest.Server) (*fake.Clientset, *config.Config, *rest.Config) {
+func getTestData(s *httptest.Server) (*fake.Clientset, *config.Config, *rest.Config) {
 	u, _ := url.Parse(s.URL)
 	port, _ := strconv.Atoi(u.Port())
 

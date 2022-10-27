@@ -2,9 +2,15 @@ package discovery
 
 import (
 	"encoding/json"
-	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
+	"fmt"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
+	internalhttp "github.com/newrelic/nri-discovery-kubernetes/internal/http"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
+	"net/http"
 	"net/http/httptest"
-	"sync"
+	"net/url"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,6 +20,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/newrelic/nri-discovery-kubernetes/internal/kubelet"
+)
+
+const (
+	nodeName      = "test-node"
+	fakeTokenFile = "./test_data/token"
 )
 
 func TestDiscoverer_Run(t *testing.T) {
@@ -49,7 +60,7 @@ func TestDiscoverer_Run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			d := &Discoverer{
 				namespaces: tt.fields.namespaces,
-				kubelet:    k.kubelet,
+				kubelet:    fakeKubeletClient(t),
 			}
 			got, err := d.Run()
 			if (err != nil) != tt.wantErr {
@@ -64,7 +75,7 @@ func TestDiscoverer_Run(t *testing.T) {
 func Test_PodsWithMultiplePorts_ReturnsIndexAndName(t *testing.T) {
 	d := &Discoverer{
 		namespaces: []string{"test"},
-		kubelet:    k.kubelet,
+		kubelet:    fakeKubeletClient(t),
 	}
 	result, err := d.Run()
 	require.NoError(t, err)
@@ -88,7 +99,57 @@ func Test_PodsWithMultiplePorts_ReturnsIndexAndName(t *testing.T) {
 	assert.EqualValues(t, p["2"], p["third"])
 }
 
-func fakeKubelet() kubelet.Kubelet {
+func fakeKubeletClient(t *testing.T) kubelet.Kubelet {
+	t.Helper()
+
+	server := httptest.NewServer(fakePodList())
+
+	k8sClient, cf, inClusterConfig := getTestData(server)
+	httpClient, _ := internalhttp.New(
+		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig),
+		internalhttp.WithMaxRetries(5),
+	)
+
+	return kubelet.New(httpClient, cf)
+}
+
+func getTestData(s *httptest.Server) (*fake.Clientset, *config.Config, *rest.Config) {
+	u, _ := url.Parse(s.URL)
+	port, _ := strconv.Atoi(u.Port())
+
+	c := fake.NewSimpleClientset(getTestNode(port))
+
+	cf := &config.Config{
+		NodeName: nodeName,
+		Host:     u.Hostname(),
+	}
+
+	inClusterConfig := &rest.Config{
+		Host:            fmt.Sprintf("%s://%s", u.Scheme, u.Host),
+		BearerTokenFile: fakeTokenFile,
+		TLSClientConfig: rest.TLSClientConfig{
+			Insecure: true,
+		},
+	}
+	return c, cf, inClusterConfig
+}
+
+func getTestNode(port int) *v1.Node {
+	return &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: nodeName,
+		},
+		Status: v1.NodeStatus{
+			DaemonEndpoints: v1.NodeDaemonEndpoints{
+				KubeletEndpoint: v1.DaemonEndpoint{
+					Port: int32(port),
+				},
+			},
+		},
+	}
+}
+
+func fakePodList() http.HandlerFunc {
 	pod1 := corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -184,31 +245,11 @@ func fakeKubelet() kubelet.Kubelet {
 		Items:    []corev1.Pod{pod1, pod2},
 	}
 
-	client := fakeHTTPClient(podList)
-	k, _ := kubelet.New(client)
-	return k
-}
+	marshaledPodList, _ := json.Marshal(podList)
 
-func fakeHTTPClient(pods corev1.PodList) http.Client {
-	return &FakeHTTPClient{pods: pods}
-}
-
-type FakeHTTPClient struct {
-	pods corev1.PodList
-}
-
-func (k *FakeHTTPClient) Get(path string) ([]byte, error) {
-	return json.Marshal(k.pods)
-}
-
-func getTestData() *http.Client {
-	t.Helper()
-
-	requestsReceived := map[string]*http.Request{}
-	l := sync.Mutex{}
-
-	testServer := httptest.NewServer(handler(&l, "http", requestsReceived, endpoints))
-
+	return func(rw http.ResponseWriter, r *http.Request) {
+		rw.Write(marshaledPodList)
+	}
 }
 
 func items() map[string]DiscoveredItem {

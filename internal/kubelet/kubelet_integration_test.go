@@ -4,11 +4,12 @@
 //go:build integration
 // +build integration
 
-package kubernetes_test
+package kubelet_test
 
 import (
 	"context"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
 	"net/url"
 	"path/filepath"
 	"testing"
@@ -176,10 +177,14 @@ func singleNodeClusterKubelet(t *testing.T) (kubelet.Kubelet, *k8s.Clientset) {
 		Host:    clusterURL.Hostname(),
 		TLS:     true,
 		Timeout: 5 * 60 * 1000, // 5 minutes in miliseconds
-
 	}
-	kubelet, err := kubelet.New(conf)
-	require.NoErrorf(t, err, "creating kubelet client")
+
+	connector := http.DefaultConnector(clientset, conf, cfg)
+
+	httpClient, err := http.New(connector, http.WithMaxRetries(5))
+	require.NoErrorf(t, err, "creating HTTP Client")
+
+	kubelet := kubelet.New(httpClient, conf)
 
 	return kubelet, clientset
 }

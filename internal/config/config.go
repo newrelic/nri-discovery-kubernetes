@@ -81,7 +81,7 @@ func IsFlagPassed(name string) bool {
 }
 
 // NewConfig generates Config from flags.
-func NewConfig(version string) (Config, error) {
+func NewConfig(version string) (*Config, error) {
 	flag.Parse()
 
 	v := viper.New()
@@ -118,7 +118,7 @@ func NewConfig(version string) (Config, error) {
 	}
 	if cluster == "" {
 		err := fmt.Errorf("cluster name is not set")
-		return Config{}, err
+		return &Config{}, err
 	}
 	config.ClusterName = cluster
 
@@ -141,5 +141,5 @@ func NewConfig(version string) (Config, error) {
 
 	config.NodeName = node
 
-	return config, nil
+	return &config, nil
 }

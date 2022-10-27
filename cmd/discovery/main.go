@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/discovery"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/kubelet"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
@@ -24,11 +26,27 @@ func main() {
 		os.Exit(4)
 	}
 
-	kubelet, err := kubelet.New(&config)
+	k8sConfig, err := getK8sConfig(config)
 	if err != nil {
-		log.Printf("failed to get Kubernetes configuration: %s", err)
-		os.Exit(1)
+		log.Printf("setting kubernetes configuration: %w", err)
+		os.Exit(5)
 	}
+
+	k8s, err := kubernetes.NewForConfig(k8sConfig)
+	if err != nil {
+		log.Printf("building kubernetes client: %w", err)
+		os.Exit(6)
+	}
+
+	connector := http.DefaultConnector(k8s, config, k8sConfig)
+
+	httpClient, err := http.New(connector, http.WithMaxRetries(5)) // TODO: Retries are hardcoded
+	if err != nil {
+		log.Printf("building kubelet client: %w", err)
+		os.Exit(7)
+	}
+
+	kubelet := kubelet.New(httpClient, config)
 	discoverer := discovery.NewDiscoverer(config.Namespaces, kubelet)
 	output, err := discoverer.Run()
 	if err != nil {
