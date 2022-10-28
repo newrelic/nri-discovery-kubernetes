@@ -1,7 +1,7 @@
 package config
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"strings"
 
@@ -10,15 +10,11 @@ import (
 )
 
 const (
-	// Host is a Kubelet host flag name.
-	Host = "host"
+	DefaultHost    = "localhost" // DefaultHost is default address where discovery will look for Kubelet API.
+	DefaultPort    = 10250       // DefaultPort is default port user for Kubelet API.
+	DefaultTimeout = 5000        // Default timeout of 5 seconds in miliseconds
 
-	// DefaultHost is default address where discovery will look for Kubelet API.
-	DefaultHost = "localhost"
-
-	// DefaultPort is default port user for Kubelet API.
-	DefaultPort = 10250
-
+	FlagHost           = "host"
 	FlagNamespaces     = "namespaces"
 	FlagPort           = "port"
 	FlagInsecure       = "insecure"
@@ -39,15 +35,17 @@ var (
 	_ = flag.Bool(FlagInsecure, false, `(optional, default false, deprecated) Use insecure (non-ssl) connection.
 For backwards compatibility this flag takes precedence over 'tls')`)
 
-	_ = flag.Int(FlagTimeout, 5000, "(optional, default 5000) timeout in ms")
+	_ = flag.Int(FlagTimeout, DefaultTimeout, "(optional, default 5000) timeout in ms")
 	_ = flag.Bool(FlagTLS, false, "(optional, default false) Use secure (tls) connection")
 	_ = flag.Int(FlagPort, DefaultPort, "(optional, default 10255) Port used to connect to the kubelet")
-	_ = flag.String(Host, DefaultHost, "(optional, default "+DefaultHost+") Host used to connect to the kubelet")
+	_ = flag.String(FlagHost, DefaultHost, "(optional, default "+DefaultHost+") Host used to connect to the kubelet")
 
 	_ = flag.String(FlagClusterName, "", "Set cluster name")
 	_ = flag.String(FlagNodeName, "", "(optional) Set node name to try to find its IP")
 
 	_ = flag.String(FlagKubeConfigFile, "", "(optional) Kubeconfig to use to connecto to kubelet")
+
+	ErrClusterNameNotSet = errors.New("cluster name is not set")
 )
 
 // Config defined the currently accepted configuration parameters of the Discoverer
@@ -87,7 +85,7 @@ func NewConfig(version string) (*Config, error) {
 	v := viper.New()
 	_ = v.BindPFlag(FlagNamespaces, flag.Lookup(FlagNamespaces))
 	_ = v.BindPFlag(FlagPort, flag.Lookup(FlagPort))
-	_ = v.BindPFlag(Host, flag.Lookup(Host))
+	_ = v.BindPFlag(FlagHost, flag.Lookup(FlagHost))
 	_ = v.BindPFlag(FlagTLS, flag.Lookup(FlagTLS))
 	_ = v.BindPFlag(FlagInsecure, flag.Lookup(FlagInsecure))
 	_ = v.BindPFlag(FlagTimeout, flag.Lookup(FlagTimeout))
@@ -102,7 +100,7 @@ func NewConfig(version string) (*Config, error) {
 	config := Config{
 		Namespaces: splitStrings(v.GetString(FlagNamespaces)),
 		Port:       v.GetInt(FlagPort),
-		Host:       v.GetString(Host),
+		Host:       v.GetString(FlagHost),
 		Timeout:    v.GetInt(FlagTimeout),
 	}
 
@@ -117,8 +115,7 @@ func NewConfig(version string) (*Config, error) {
 		cluster = v.GetString(FlagClusterName)
 	}
 	if cluster == "" {
-		err := fmt.Errorf("cluster name is not set")
-		return &Config{}, err
+		return &Config{}, ErrClusterNameNotSet
 	}
 	config.ClusterName = cluster
 
