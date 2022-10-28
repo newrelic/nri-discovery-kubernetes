@@ -10,6 +10,8 @@ import (
 	"context"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
+	log "github.com/sirupsen/logrus"
+	"io"
 	"net/url"
 	"path/filepath"
 	"testing"
@@ -173,13 +175,19 @@ func singleNodeClusterKubelet(t *testing.T) (kubernetes.Kubelet, *k8s.Clientset)
 	require.NoErrorf(t, err, "parsing API URL")
 
 	conf := &config.Config{
-		Port:    10250,
-		Host:    clusterURL.Hostname(),
-		TLS:     true,
-		Timeout: 5 * 60 * 1000, // 5 minutes in miliseconds
+		Port:     10250,
+		Host:     clusterURL.Hostname(),
+		NodeName: nodes.Items[0].Name,
+		TLS:      true,
+		Timeout:  5 * 60 * 1000, // 5 minutes in miliseconds
 	}
 
-	connector := http.DefaultConnector(clientset, conf, cfg)
+	logger := log.New()
+	logger.SetOutput(io.Discard)
+	// Set level to panic might save a few cycles if we don't even attempt to write to io.Discard.
+	logger.SetLevel(log.PanicLevel)
+
+	connector := http.DefaultConnector(clientset, conf, cfg, logger)
 
 	httpClient, err := http.New(connector, http.WithMaxRetries(5))
 	require.NoErrorf(t, err, "creating HTTP Client")
