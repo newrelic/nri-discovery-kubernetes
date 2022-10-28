@@ -3,6 +3,8 @@ package http_test
 import (
 	"fmt"
 	internalhttp "github.com/newrelic/nri-discovery-kubernetes/internal/http"
+	log "github.com/sirupsen/logrus"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -37,11 +39,12 @@ const (
 func TestClientCalls(t *testing.T) {
 	s, requests := testHTTPServerWithEndpoints(t, []string{healthz, prometheusMetric, kubeletMetric})
 
-	k8sClient, cf, inClusterConfig := getTestData(s)
+	k8sClient, cf, inClusterConfig, logger := getTestData(s)
 
 	kubeletClient, err := internalhttp.New(
-		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig),
+		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig, logger),
 		internalhttp.WithMaxRetries(retries),
+		internalhttp.WithLogger(logger),
 	)
 
 	t.Run("creation_succeeds_receiving_200", func(t *testing.T) {
@@ -73,12 +76,13 @@ func TestClientCallsViaAPIProxy(t *testing.T) {
 		[]string{path.Join(apiProxy, healthz), path.Join(apiProxy, prometheusMetric), path.Join(apiProxy, kubeletMetric)},
 	)
 
-	k8sClient, cf, inClusterConfig := getTestData(s)
+	k8sClient, cf, inClusterConfig, logger := getTestData(s)
 	cf.Host = "invalid" // disabling local connection
 
 	kubeletClient, err := internalhttp.New(
-		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig),
+		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig, logger),
 		internalhttp.WithMaxRetries(retries),
+		internalhttp.WithLogger(logger),
 	)
 
 	t.Run("creation_succeeds_receiving_200", func(t *testing.T) {
@@ -115,7 +119,7 @@ func TestConfigPrecedence(t *testing.T) {
 		t.Parallel()
 
 		s, _ := testHTTPServerWithEndpoints(t, []string{healthz, prometheusMetric, kubeletMetric})
-		_, cf, inClusterConfig := getTestData(s)
+		_, cf, inClusterConfig, logger := getTestData(s)
 
 		// We use an empty client, but the connector is retrieving the port from the config.
 		k8sClient := fake.NewSimpleClientset()
@@ -124,8 +128,9 @@ func TestConfigPrecedence(t *testing.T) {
 		cf.Port = port
 
 		_, err := internalhttp.New(
-			internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig),
+			internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig, logger),
 			internalhttp.WithMaxRetries(retries),
+			internalhttp.WithLogger(logger),
 		)
 		require.NoError(t, err)
 	})
@@ -136,11 +141,12 @@ func TestClientFailingProbingHTTP(t *testing.T) {
 
 	s, requests := testHTTPServerWithEndpoints(t, []string{})
 
-	c, cf, inClusterConfig := getTestData(s)
+	c, cf, inClusterConfig, logger := getTestData(s)
 
 	_, err := internalhttp.New(
-		internalhttp.DefaultConnector(c, cf, inClusterConfig),
+		internalhttp.DefaultConnector(c, cf, inClusterConfig, logger),
 		internalhttp.WithMaxRetries(retries),
+		internalhttp.WithLogger(logger),
 	)
 
 	t.Run("fails_receiving_404", func(t *testing.T) {
@@ -174,12 +180,13 @@ func TestClientFailingProbingHTTPS(t *testing.T) {
 
 	s, requests := testHTTPSServerWithEndpoints(t, []string{})
 
-	c, cf, inClusterConfig := getTestData(s)
+	c, cf, inClusterConfig, logger := getTestData(s)
 	cf.TLS = true
 
 	_, err := internalhttp.New(
-		internalhttp.DefaultConnector(c, cf, inClusterConfig),
+		internalhttp.DefaultConnector(c, cf, inClusterConfig, logger),
 		internalhttp.WithMaxRetries(retries),
+		internalhttp.WithLogger(logger),
 	)
 
 	t.Run("fails_receiving_404", func(t *testing.T) {
@@ -217,24 +224,31 @@ func TestClientFailingProbingHTTPS(t *testing.T) {
 func TestClientTimeoutAndRetries(t *testing.T) {
 	timeout := 200
 
+	l := &sync.Mutex{}
 	var requestsReceived int
+
 	s := httptest.NewServer(http.HandlerFunc(
 		func(rw http.ResponseWriter, r *http.Request) {
-			requestsReceived++
-			if requestsReceived == 1 && r.RequestURI != path.Join(apiProxy, healthz) {
+			// We want to lock the first request to the lagging endpoint.
+			l.Lock()
+			if r.RequestURI == kubeletMetricWithDelay && requestsReceived == 0 {
+				requestsReceived++
+				l.Unlock()
 				time.Sleep(time.Duration(timeout) * 2 * time.Millisecond)
+				rw.WriteHeader(200)
 				return
 			}
+			l.Unlock()
 			rw.WriteHeader(200)
 		},
 	))
 
-	c, cf, inClusterConfig := getTestData(s)
+	c, cf, inClusterConfig, logger := getTestData(s)
 
 	cf.Timeout = timeout
 
 	kubeletClient, err := internalhttp.New(
-		internalhttp.DefaultConnector(c, cf, inClusterConfig),
+		internalhttp.DefaultConnector(c, cf, inClusterConfig, logger),
 		internalhttp.WithMaxRetries(2),
 	)
 
@@ -245,8 +259,8 @@ func TestClientTimeoutAndRetries(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, r.StatusCode, http.StatusOK)
 
-		// 3 since one to the /healthz to connect, one blocked by timeout and one succeeding
-		assert.Equal(t, requestsReceived, 3)
+		// 1 because it has to fail the first lagged request
+		assert.Equal(t, requestsReceived, 1)
 	})
 }
 
@@ -255,17 +269,18 @@ func TestClientOptions(t *testing.T) {
 
 	s, _ := testHTTPServerWithEndpoints(t, []string{healthz, prometheusMetric, kubeletMetric})
 
-	k8sClient, cf, inClusterConfig := getTestData(s)
+	k8sClient, cf, inClusterConfig, logger := getTestData(s)
 
 	_, err := internalhttp.New(
-		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig),
+		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig, logger),
 		internalhttp.WithMaxRetries(retries),
+		internalhttp.WithLogger(logger),
 	)
 
 	assert.NoError(t, err)
 }
 
-func getTestData(s *httptest.Server) (*fake.Clientset, *config.Config, *rest.Config) {
+func getTestData(s *httptest.Server) (*fake.Clientset, *config.Config, *rest.Config, *log.Logger) {
 	u, _ := url.Parse(s.URL)
 	port, _ := strconv.Atoi(u.Port())
 
@@ -283,7 +298,13 @@ func getTestData(s *httptest.Server) (*fake.Clientset, *config.Config, *rest.Con
 			Insecure: true,
 		},
 	}
-	return c, cf, inClusterConfig
+
+	logger := log.New()
+	logger.SetOutput(io.Discard)
+	// Set level to panic might save a few cycles if we don't even attempt to write to io.Discard.
+	logger.SetLevel(log.PanicLevel)
+
+	return c, cf, inClusterConfig, logger
 }
 
 func getTestNode(port int) *v1.Node {

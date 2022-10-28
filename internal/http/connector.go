@@ -30,14 +30,16 @@ type Connector interface {
 }
 
 type defaultConnector struct {
+	logger          *logrus.Logger
 	kc              kubernetes.Interface
 	inClusterConfig *rest.Config
 	config          *config.Config
 }
 
 // DefaultConnector returns a defaultConnector that checks connection against local kubelet and api proxy.
-func DefaultConnector(kc kubernetes.Interface, config *config.Config, inClusterConfig *rest.Config) Connector {
+func DefaultConnector(kc kubernetes.Interface, config *config.Config, inClusterConfig *rest.Config, logger *logrus.Logger) Connector {
 	return &defaultConnector{
+		logger:          logger,
 		inClusterConfig: inClusterConfig,
 		kc:              kc,
 		config:          config,
@@ -59,7 +61,7 @@ func (dp *defaultConnector) Connect() (*connParams, error) {
 	kubeletScheme := dp.schemeFor(dp.config)
 	hostURL := net.JoinHostPort(dp.config.Host, fmt.Sprint(kubeletPort))
 
-	logrus.Infof("Trying to connect to kubelet locally with scheme=%q hostURL=%q", kubeletScheme, hostURL)
+	dp.logger.Infof("Trying to connect to kubelet locally with scheme=%q hostURL=%q", kubeletScheme, hostURL)
 	trip, err := tripperWithBearerTokenAndRefresh(dp.inClusterConfig.BearerTokenFile)
 	if err != nil {
 		return nil, fmt.Errorf("creating tripper connecting to kubelet through nodeIP: %w", err)
@@ -67,13 +69,13 @@ func (dp *defaultConnector) Connect() (*connParams, error) {
 
 	conn, err := dp.checkLocalConnection(trip, kubeletScheme, hostURL)
 	if err == nil {
-		logrus.Infof("Connected to Kubelet through nodeIP with scheme=%q hostURL=%q", kubeletScheme, hostURL)
+		dp.logger.Infof("Connected to Kubelet through nodeIP with scheme=%q hostURL=%q", kubeletScheme, hostURL)
 		return conn, nil
 	}
-	logrus.Warnf("Kubelet not reachable locally with scheme=%q hostURL=%q: %v", kubeletScheme, hostURL, err)
-	logrus.Warnf("this could lead to interrogate the API Server too much to an extent the cluster may suffer. Fix you configuration!")
+	dp.logger.Warnf("Kubelet not reachable locally with scheme=%q hostURL=%q: %v", kubeletScheme, hostURL, err)
+	dp.logger.Warnf("this could lead to interrogate the API Server too much to an extent the cluster may suffer. Fix you configuration!")
 
-	logrus.Infof("Trying to connect to kubelet through API proxy %q to node %q", dp.inClusterConfig.Host, dp.config.NodeName)
+	dp.logger.Infof("Trying to connect to kubelet through API proxy %q to node %q", dp.inClusterConfig.Host, dp.config.NodeName)
 	tripperAPI, err := rest.TransportFor(dp.inClusterConfig)
 	if err != nil {
 		return nil, fmt.Errorf("creating tripper connecting to kubelet through API server proxy: %w", err)
@@ -88,7 +90,7 @@ func (dp *defaultConnector) Connect() (*connParams, error) {
 }
 
 func (dp *defaultConnector) checkLocalConnection(tripperWithBearerTokenRefreshing http.RoundTripper, scheme string, hostURL string) (*connParams, error) {
-	logrus.Debugf("connecting to kubelet directly with nodeIP")
+	dp.logger.Debugf("connecting to kubelet directly with nodeIP")
 	var err error
 	var conn *connParams
 
@@ -102,7 +104,7 @@ func (dp *defaultConnector) checkLocalConnection(tripperWithBearerTokenRefreshin
 			return conn, nil
 		}
 	default:
-		logrus.Infof("Checking both HTTP and HTTPS since the scheme was not detected automatically, " +
+		dp.logger.Infof("Checking both HTTP and HTTPS since the scheme was not detected automatically, " +
 			"you can set set kubelet.scheme to avoid this behaviour")
 
 		if conn, err = dp.checkConnectionHTTPS(hostURL, tripperWithBearerTokenRefreshing); err == nil {
@@ -119,7 +121,7 @@ func (dp *defaultConnector) checkLocalConnection(tripperWithBearerTokenRefreshin
 
 func (dp *defaultConnector) getPort() (int32, error) {
 	if dp.config.Port != 0 {
-		logrus.Debugf("Setting Port %d as specified by user config", dp.config.Port)
+		dp.logger.Debugf("Setting Port %d as specified by user config", dp.config.Port)
 		return int32(dp.config.Port), nil
 	}
 
@@ -130,27 +132,27 @@ func (dp *defaultConnector) getPort() (int32, error) {
 	}
 
 	port := node.Status.DaemonEndpoints.KubeletEndpoint.Port
-	logrus.Debugf("Setting Port %d as found in status condition", port)
+	dp.logger.Debugf("Setting Port %d as found in status condition", port)
 
 	return port, nil
 }
 
 func (dp *defaultConnector) schemeFor(c *config.Config) string {
 	if c.TLS {
-		logrus.Debugf("flag for TLS explicitly set. using schema %s", httpsScheme)
+		dp.logger.Debugf("flag for TLS explicitly set. using schema %s", httpsScheme)
 		return httpsScheme
 	}
 
 	switch c.Port {
 	case defaultHTTPKubeletPort:
-		logrus.Debugf("Setting Kubelet Endpoint Scheme http since Port is %d", c.Port)
+		dp.logger.Debugf("Setting Kubelet Endpoint Scheme http since Port is %d", c.Port)
 		return httpScheme
 	case defaultHTTPSKubeletPort:
-		logrus.Debugf("Setting Kubelet Endpoint Scheme https since Port is %d", c.Port)
+		dp.logger.Debugf("Setting Kubelet Endpoint Scheme https since Port is %d", c.Port)
 		return httpsScheme
 	}
 
-	logrus.Warningf("cannot automatically figure out scheme from non-standard port %d, and no TLS flag has been provided. Defaulting to %s", c.Port, httpScheme)
+	dp.logger.Warningf("cannot automatically figure out scheme from non-standard port %d, and no TLS flag has been provided. Defaulting to %s", c.Port, httpScheme)
 	return httpScheme
 }
 
@@ -177,7 +179,7 @@ func (dp *defaultConnector) checkConnectionAPIProxy(apiServer string, nodeName s
 		},
 	}
 
-	logrus.Debugf("Testing kubelet connection through API proxy: %s%s", apiURL.Host, conn.url.Path)
+	dp.logger.Debugf("Testing kubelet connection through API proxy: %s%s", apiURL.Host, conn.url.Path)
 
 	if err = checkConnection(conn); err != nil {
 		return nil, fmt.Errorf("checking connection via API proxy: %w", err)
@@ -187,7 +189,7 @@ func (dp *defaultConnector) checkConnectionAPIProxy(apiServer string, nodeName s
 }
 
 func (dp *defaultConnector) checkConnectionHTTP(hostURL string) (*connParams, error) {
-	logrus.Debugf("testing kubelet connection over plain http to %s", hostURL)
+	dp.logger.Debugf("testing kubelet connection over plain http to %s", hostURL)
 
 	conn := dp.defaultConnParamsHTTP(hostURL)
 	if err := checkConnection(conn); err != nil {
@@ -198,7 +200,7 @@ func (dp *defaultConnector) checkConnectionHTTP(hostURL string) (*connParams, er
 }
 
 func (dp *defaultConnector) checkConnectionHTTPS(hostURL string, tripperBearerRefreshing http.RoundTripper) (*connParams, error) {
-	logrus.Debugf("testing kubelet connection over https to %s", hostURL)
+	dp.logger.Debugf("testing kubelet connection over https to %s", hostURL)
 
 	conn := dp.defaultConnParamsHTTPS(hostURL, tripperBearerRefreshing)
 	if err := checkConnection(conn); err != nil {

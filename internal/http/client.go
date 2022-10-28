@@ -2,7 +2,6 @@ package http
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -27,6 +26,14 @@ type Client struct {
 
 type OptionFunc func(kc *Client) error
 
+// WithLogger returns an OptionFunc to change the logger from the default noop logger.
+func WithLogger(logger *log.Logger) OptionFunc {
+	return func(kubeletClient *Client) error {
+		kubeletClient.logger = logger
+		return nil
+	}
+}
+
 // WithMaxRetries returns an OptionFunc to change the number of retries used int Pester Client.
 func WithMaxRetries(retries int) OptionFunc {
 	return func(kubeletClient *Client) error {
@@ -40,10 +47,6 @@ func New(connector Connector, opts ...OptionFunc) (*Client, error) {
 	c := &Client{
 		logger: log.New(),
 	}
-	// In case WithLogger option is not used, we discard all the logs
-	c.logger.SetOutput(io.Discard)
-	// Set level to panic might save a few cycles if we don't even attempt to write to io.Discard.
-	c.logger.SetLevel(log.PanicLevel)
 
 	for i, opt := range opts {
 		if err := opt(c); err != nil {

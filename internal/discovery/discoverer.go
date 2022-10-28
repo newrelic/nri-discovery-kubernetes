@@ -3,7 +3,7 @@ package discovery
 import (
 	"strings"
 
-	"github.com/newrelic/nri-discovery-kubernetes/internal/kubelet"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
 )
 
@@ -34,11 +34,11 @@ type Output []DiscoveredItem
 // Discoverer implements the specific discovery mechanism
 type Discoverer struct {
 	namespaces []string
-	kubelet    kubelet.Kubelet
+	kubelet    kubernetes.Kubelet
 }
 
 // NewDiscoverer creates a new discoverer implementation
-func NewDiscoverer(namespaces []string, kubelet kubelet.Kubelet) *Discoverer {
+func NewDiscoverer(namespaces []string, kubelet kubernetes.Kubelet) *Discoverer {
 	return &Discoverer{
 		namespaces: namespaces,
 		kubelet:    kubelet,
@@ -51,7 +51,7 @@ func (d *Discoverer) Run() (Output, error) {
 	return processContainers(pods), err
 }
 
-func processContainers(containers []kubelet.ContainerInfo) Output {
+func processContainers(containers []kubernetes.ContainerInfo) Output {
 	// default empty, instead of nil
 	output := Output{}
 	for _, c := range containers {

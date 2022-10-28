@@ -4,7 +4,7 @@
 //go:build integration
 // +build integration
 
-package kubelet_test
+package kubernetes_test
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/newrelic/nri-discovery-kubernetes/internal/kubelet"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
 )
 
@@ -155,7 +155,7 @@ func Test_Kubelet_client_expects_pod_container_statuses_to_have_populated(t *tes
 	})
 }
 
-func singleNodeClusterKubelet(t *testing.T) (kubelet.Kubelet, *k8s.Clientset) {
+func singleNodeClusterKubelet(t *testing.T) (kubernetes.Kubelet, *k8s.Clientset) {
 	t.Helper()
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", filepath.Join(utils.HomeDir(), ".kube", "config"))
@@ -184,7 +184,7 @@ func singleNodeClusterKubelet(t *testing.T) (kubelet.Kubelet, *k8s.Clientset) {
 	httpClient, err := http.New(connector, http.WithMaxRetries(5))
 	require.NoErrorf(t, err, "creating HTTP Client")
 
-	kubelet := kubelet.New(httpClient, conf)
+	kubelet := kubernetes.New(httpClient, conf)
 
 	return kubelet, clientset
 }

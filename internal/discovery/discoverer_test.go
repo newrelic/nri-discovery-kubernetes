@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
 	internalhttp "github.com/newrelic/nri-discovery-kubernetes/internal/http"
+	log "github.com/sirupsen/logrus"
+	"io"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 	"net/http"
@@ -19,7 +21,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/newrelic/nri-discovery-kubernetes/internal/kubelet"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
 )
 
 const (
@@ -85,7 +87,7 @@ func Test_PodsWithMultiplePorts_ReturnsIndexAndName(t *testing.T) {
 	assert.Contains(t, result[0].Variables, ports)
 
 	// assert correct type
-	p := result[0].Variables[ports].(kubelet.PortsMap)
+	p := result[0].Variables[ports].(kubernetes.PortsMap)
 	assert.NotEmpty(t, p)
 
 	assert.Contains(t, p, "0")
@@ -99,21 +101,22 @@ func Test_PodsWithMultiplePorts_ReturnsIndexAndName(t *testing.T) {
 	assert.EqualValues(t, p["2"], p["third"])
 }
 
-func fakeKubeletClient(t *testing.T) kubelet.Kubelet {
+func fakeKubeletClient(t *testing.T) kubernetes.Kubelet {
 	t.Helper()
 
 	server := httptest.NewServer(fakePodList())
 
-	k8sClient, cf, inClusterConfig := getTestData(server)
+	k8sClient, cf, inClusterConfig, logger := getTestData(server)
 	httpClient, _ := internalhttp.New(
-		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig),
+		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig, logger),
 		internalhttp.WithMaxRetries(5),
+		internalhttp.WithLogger(logger),
 	)
 
-	return kubelet.New(httpClient, cf)
+	return kubernetes.New(httpClient, cf)
 }
 
-func getTestData(s *httptest.Server) (*fake.Clientset, *config.Config, *rest.Config) {
+func getTestData(s *httptest.Server) (*fake.Clientset, *config.Config, *rest.Config, *log.Logger) {
 	u, _ := url.Parse(s.URL)
 	port, _ := strconv.Atoi(u.Port())
 
@@ -131,7 +134,13 @@ func getTestData(s *httptest.Server) (*fake.Clientset, *config.Config, *rest.Con
 			Insecure: true,
 		},
 	}
-	return c, cf, inClusterConfig
+
+	logger := log.New()
+	logger.SetOutput(io.Discard)
+	// Set level to panic might save a few cycles if we don't even attempt to write to io.Discard.
+	logger.SetLevel(log.PanicLevel)
+
+	return c, cf, inClusterConfig, logger
 }
 
 func getTestNode(port int) *v1.Node {
@@ -257,12 +266,12 @@ func items() map[string]DiscoveredItem {
 		"test": {
 			Variables: VariablesMap{
 				cluster:                   "",
-				node:                      "",
+				node:                      nodeName,
 				nodeIP:                    "10.0.0.0",
 				namespace:                 "test",
 				podName:                   "test",
 				ip:                        "127.0.0.1",
-				ports:                     kubelet.PortsMap{"0": 1, "1": 2, "2": 3, "first": 1, "third": 3},
+				ports:                     kubernetes.PortsMap{"0": 1, "1": 2, "2": 3, "first": 1, "third": 3},
 				name:                      "test",
 				id:                        "testID",
 				image:                     "testImage",
@@ -271,7 +280,7 @@ func items() map[string]DiscoveredItem {
 			},
 			MetricAnnotations: AnnotationsMap{
 				cluster:              "",
-				node:                 "",
+				node:                 nodeName,
 				namespace:            "test",
 				podName:              "test",
 				name:                 "test",
@@ -289,12 +298,12 @@ func items() map[string]DiscoveredItem {
 		"fake": {
 			Variables: VariablesMap{
 				cluster:                   "",
-				node:                      "",
+				node:                      nodeName,
 				nodeIP:                    "10.0.0.0",
 				namespace:                 "fake",
 				podName:                   "fake",
 				ip:                        "127.0.0.2",
-				ports:                     kubelet.PortsMap{"0": 1},
+				ports:                     kubernetes.PortsMap{"0": 1},
 				name:                      "fake",
 				id:                        "fakeID",
 				image:                     "fakeImage",
@@ -303,7 +312,7 @@ func items() map[string]DiscoveredItem {
 			},
 			MetricAnnotations: AnnotationsMap{
 				cluster:              "",
-				node:                 "",
+				node:                 nodeName,
 				namespace:            "fake",
 				podName:              "fake",
 				name:                 "fake",
