@@ -37,7 +37,9 @@ const (
 )
 
 func TestClientCalls(t *testing.T) {
-	s, requests := testHTTPServerWithEndpoints(t, []string{healthz, prometheusMetric, kubeletMetric})
+	l := &sync.Mutex{}
+
+	s, requests := testHTTPServerWithEndpoints(t, l, []string{healthz, prometheusMetric, kubeletMetric})
 
 	k8sClient, cf, inClusterConfig, logger := getTestData(s)
 
@@ -54,7 +56,9 @@ func TestClientCalls(t *testing.T) {
 	t.Run("hits_only_local_kubelet", func(t *testing.T) {
 		require.NotNil(t, requests)
 
+		l.Lock()
 		_, found := requests[healthz]
+		l.Unlock()
 		assert.True(t, found)
 	})
 
@@ -63,7 +67,9 @@ func TestClientCalls(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, r.StatusCode, http.StatusOK)
 
+		l.Lock()
 		_, found := requests[kubeletMetric]
+		l.Unlock()
 		assert.True(t, found)
 	})
 }
@@ -71,10 +77,9 @@ func TestClientCalls(t *testing.T) {
 func TestClientCallsViaAPIProxy(t *testing.T) {
 	t.Parallel()
 
-	s, requests := testHTTPSServerWithEndpoints(
-		t,
-		[]string{path.Join(apiProxy, healthz), path.Join(apiProxy, prometheusMetric), path.Join(apiProxy, kubeletMetric)},
-	)
+	l := &sync.Mutex{}
+
+	s, requests := testHTTPSServerWithEndpoints(t, l, []string{path.Join(apiProxy, healthz), path.Join(apiProxy, prometheusMetric), path.Join(apiProxy, kubeletMetric)})
 
 	k8sClient, cf, inClusterConfig, logger := getTestData(s)
 	cf.Host = "invalid" // disabling local connection
@@ -96,7 +101,9 @@ func TestClientCallsViaAPIProxy(t *testing.T) {
 
 		require.NotNil(t, requests)
 
+		l.Lock()
 		_, found := requests[path.Join(apiProxy, healthz)]
+		l.Unlock()
 		assert.True(t, found)
 	})
 
@@ -107,7 +114,9 @@ func TestClientCallsViaAPIProxy(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, r.StatusCode, http.StatusOK)
 
+		l.Lock()
 		_, found := requests[path.Join(apiProxy, kubeletMetric)]
+		l.Unlock()
 		assert.True(t, found)
 	})
 }
@@ -118,7 +127,9 @@ func TestConfigPrecedence(t *testing.T) {
 	t.Run("connector_takes_port", func(t *testing.T) {
 		t.Parallel()
 
-		s, _ := testHTTPServerWithEndpoints(t, []string{healthz, prometheusMetric, kubeletMetric})
+		l := &sync.Mutex{}
+
+		s, _ := testHTTPServerWithEndpoints(t, l, []string{healthz, prometheusMetric, kubeletMetric})
 		_, cf, inClusterConfig, logger := getTestData(s)
 
 		// We use an empty client, but the connector is retrieving the port from the config.
@@ -139,7 +150,9 @@ func TestConfigPrecedence(t *testing.T) {
 func TestClientFailingProbingHTTP(t *testing.T) {
 	t.Parallel()
 
-	s, requests := testHTTPServerWithEndpoints(t, []string{})
+	l := &sync.Mutex{}
+
+	s, requests := testHTTPServerWithEndpoints(t, l, []string{})
 
 	c, cf, inClusterConfig, logger := getTestData(s)
 
@@ -160,10 +173,14 @@ func TestClientFailingProbingHTTP(t *testing.T) {
 
 		require.NotNil(t, requests)
 
+		l.Lock()
 		_, found := requests[path.Join(apiProxy, healthz)]
+		l.Unlock()
 		assert.True(t, found)
 
+		l.Lock()
 		_, found = requests[healthz]
+		l.Unlock()
 		assert.True(t, found)
 	})
 
@@ -178,7 +195,9 @@ func TestClientFailingProbingHTTP(t *testing.T) {
 func TestClientFailingProbingHTTPS(t *testing.T) {
 	t.Parallel()
 
-	s, requests := testHTTPSServerWithEndpoints(t, []string{})
+	l := &sync.Mutex{}
+
+	s, requests := testHTTPSServerWithEndpoints(t, l, []string{})
 
 	c, cf, inClusterConfig, logger := getTestData(s)
 	cf.TLS = true
@@ -200,10 +219,14 @@ func TestClientFailingProbingHTTPS(t *testing.T) {
 
 		require.NotNil(t, requests)
 
+		l.Lock()
 		_, found := requests[path.Join(apiProxy, healthz)]
+		l.Unlock()
 		assert.True(t, found)
 
+		l.Lock()
 		_, found = requests[healthz]
+		l.Unlock()
 		assert.True(t, found)
 	})
 
@@ -267,7 +290,9 @@ func TestClientTimeoutAndRetries(t *testing.T) {
 func TestClientOptions(t *testing.T) {
 	t.Parallel()
 
-	s, _ := testHTTPServerWithEndpoints(t, []string{healthz, prometheusMetric, kubeletMetric})
+	l := &sync.Mutex{}
+
+	s, _ := testHTTPServerWithEndpoints(t, l, []string{healthz, prometheusMetric, kubeletMetric})
 
 	k8sClient, cf, inClusterConfig, logger := getTestData(s)
 
@@ -322,29 +347,27 @@ func getTestNode(port int) *v1.Node {
 	}
 }
 
-func testHTTPServerWithEndpoints(t *testing.T, endpoints []string) (*httptest.Server, map[string]*http.Request) {
+func testHTTPServerWithEndpoints(t *testing.T, l *sync.Mutex, endpoints []string) (*httptest.Server, map[string]*http.Request) {
 	t.Helper()
 
 	requestsReceived := map[string]*http.Request{}
-	l := sync.Mutex{}
 
-	testServer := httptest.NewServer(handler(&l, "http", requestsReceived, endpoints))
+	testServer := httptest.NewServer(handler(l, requestsReceived, endpoints))
 
 	return testServer, requestsReceived
 }
 
-func testHTTPSServerWithEndpoints(t *testing.T, endpoints []string) (*httptest.Server, map[string]*http.Request) {
+func testHTTPSServerWithEndpoints(t *testing.T, l *sync.Mutex, endpoints []string) (*httptest.Server, map[string]*http.Request) {
 	t.Helper()
 
 	requestsReceived := map[string]*http.Request{}
-	l := sync.Mutex{}
 
-	testServer := httptest.NewTLSServer(handler(&l, "https", requestsReceived, endpoints))
+	testServer := httptest.NewTLSServer(handler(l, requestsReceived, endpoints))
 
 	return testServer, requestsReceived
 }
 
-func handler(l sync.Locker, scheme string, requestsReceived map[string]*http.Request, endpoints []string) http.HandlerFunc {
+func handler(l sync.Locker, requestsReceived map[string]*http.Request, endpoints []string) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		l.Lock()
 		requestsReceived[r.RequestURI] = r
