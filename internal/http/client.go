@@ -94,7 +94,7 @@ func (c *Client) Get(urlPath string) (*http.Response, error) {
 
 	r, err := http.NewRequest(http.MethodGet, e.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("error creating request to: %s. Got error: %s ", e.String(), err)
+		return nil, fmt.Errorf("error creating request to: %s. Got error: %w ", e.String(), err)
 	}
 
 	c.logger.Debugf("Calling Kubelet endpoint: %s", r.URL.String())

@@ -3,12 +3,13 @@ package kubernetes
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"strconv"
+
 	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
-	"io"
 	corev1 "k8s.io/api/core/v1"
-	"strconv"
 )
 
 const (
@@ -63,6 +64,7 @@ func (kube *kubelet) FindContainers(namespaces []string) ([]ContainerInfo, error
 
 func (kube *kubelet) getPods() ([]corev1.Pod, error) {
 	resp, err := kube.client.Get(podsPath)
+	defer resp.Body.Close()
 	if err != nil {
 		err = fmt.Errorf("failed to execute request against kubelet: %s ", err)
 		return []corev1.Pod{}, err

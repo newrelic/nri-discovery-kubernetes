@@ -53,6 +53,7 @@ func TestClientCalls(t *testing.T) {
 	require.NoError(t, err, "Client creation succeeded")
 
 	r, err := kubeletClient.Get(kubeletMetric)
+	defer r.Body.Close()
 	l.Lock()
 	_, foundHealthz := requests[healthz]
 	_, foundKubelet := requests[kubeletMetric]
@@ -84,6 +85,7 @@ func TestClientCallsViaAPIProxy(t *testing.T) {
 	require.NoError(t, err, "Client creation succeeded")
 
 	r, err := kubeletClient.Get(kubeletMetric)
+	defer r.Body.Close()
 	l.Lock()
 	_, foundHealthz := requests[path.Join(apiProxy, healthz)]
 	_, foundKubelet := requests[path.Join(apiProxy, kubeletMetric)]
@@ -224,6 +226,7 @@ func TestClientTimeoutAndRetries(t *testing.T) {
 	require.NoError(t, err)
 
 	r, err := kubeletClient.Get(kubeletMetricWithDelay)
+	defer r.Body.Close()
 	require.NoError(t, err, "Client created correctly")
 	assert.Equal(t, r.StatusCode, http.StatusOK, "Client request answered successfully")
 
