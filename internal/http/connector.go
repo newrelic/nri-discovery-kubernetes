@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -22,6 +23,10 @@ const (
 	apiProxyPath = "/api/v1/nodes/%s/proxy/"
 	httpScheme   = "http"
 	httpsScheme  = "https"
+)
+
+var (
+	ErrUnexpectedStatusCode = errors.New("the status code obtained was not expected")
 )
 
 // Connector provides an interface to retrieve connParams to connect to a Kubelet instance.
@@ -213,9 +218,9 @@ func (dp *defaultConnector) checkConnectionHTTPS(hostURL string, tripperBearerRe
 func checkConnection(conn connParams) error {
 	conn.url.Path = path.Join(conn.url.Path, healthzPath)
 
-	r, err := http.NewRequest(http.MethodGet, conn.url.String(), nil)
+	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, conn.url.String(), nil)
 	if err != nil {
-		return fmt.Errorf("creating request to %q: %v", conn.url.String(), err)
+		return fmt.Errorf("creating request to %q: %w", conn.url.String(), err)
 	}
 
 	resp, err := conn.client.Do(r)
@@ -225,7 +230,7 @@ func checkConnection(conn connParams) error {
 	defer resp.Body.Close() // nolint: errcheck
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("calling %s got non-200 status code: %d", conn.url.String(), resp.StatusCode)
+		return fmt.Errorf("calling %s got non-200 status code: %d. %w", conn.url.String(), resp.StatusCode, ErrUnexpectedStatusCode)
 	}
 
 	return nil
@@ -237,7 +242,7 @@ func tripperWithBearerTokenAndRefresh(tokenFile string) (http.RoundTripper, erro
 	t := http.DefaultTransport.(*http.Transport).Clone()
 	t.TLSClientConfig.InsecureSkipVerify = true
 	// Kubelet cert is usually not issued to `localhost` so it fails when you want to connect using that hostname.
-	t.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // nolint: gosec
+	t.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint: gosec
 
 	// Use the default kubernetes Bearer token authentication RoundTripper
 	tripperWithBearerRefreshing, err := transport.NewBearerAuthWithRefreshRoundTripper("", tokenFile, t)

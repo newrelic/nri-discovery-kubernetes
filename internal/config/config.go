@@ -13,12 +13,14 @@ const (
 	DefaultHost    = "localhost" // DefaultHost is default address where discovery will look for Kubelet API.
 	DefaultPort    = 10250       // DefaultPort is default port user for Kubelet API.
 	DefaultTimeout = 5000        // Default timeout of 5 seconds in miliseconds
+	DefaultRetries = 5           // Default retries to 5
 
 	FlagHost           = "host"
 	FlagNamespaces     = "namespaces"
 	FlagPort           = "port"
 	FlagInsecure       = "insecure"
 	FlagTimeout        = "timeout"
+	FlagRetries        = "retries"
 	FlagTLS            = "tls"
 	FlagKubeConfigFile = "kubeconfig"
 	FlagClusterName    = "cluster_name"
@@ -36,6 +38,8 @@ var (
 For backwards compatibility this flag takes precedence over 'tls')`)
 
 	_ = flag.Int(FlagTimeout, DefaultTimeout, "(optional, default 5000) timeout in ms")
+	_ = flag.Int(FlagRetries, DefaultRetries, "(optional, default 5) number of retries before giving up the request to kubelet/API Server")
+
 	_ = flag.Bool(FlagTLS, false, "(optional, default false) Use secure (tls) connection")
 	_ = flag.Int(FlagPort, DefaultPort, "(optional, default 10255) Port used to connect to the kubelet")
 	_ = flag.String(FlagHost, DefaultHost, "(optional, default "+DefaultHost+") Host used to connect to the kubelet")
@@ -48,13 +52,14 @@ For backwards compatibility this flag takes precedence over 'tls')`)
 	ErrClusterNameNotSet = errors.New("cluster name is not set")
 )
 
-// Config defined the currently accepted configuration parameters of the Discoverer
+// Config defined the currently accepted configuration parameters of the Discoverer.
 type Config struct {
 	Namespaces     []string
 	Port           int
 	Host           string
 	TLS            bool
 	Timeout        int
+	Retries        int
 	KubeConfigFile string
 	ClusterName    string
 	NodeName       string
@@ -89,6 +94,7 @@ func NewConfig(version string) (*Config, error) {
 	_ = v.BindPFlag(FlagTLS, flag.Lookup(FlagTLS))
 	_ = v.BindPFlag(FlagInsecure, flag.Lookup(FlagInsecure))
 	_ = v.BindPFlag(FlagTimeout, flag.Lookup(FlagTimeout))
+	_ = v.BindPFlag(FlagRetries, flag.Lookup(FlagRetries))
 	_ = v.BindPFlag(FlagKubeConfigFile, flag.Lookup(FlagKubeConfigFile))
 
 	_ = v.BindPFlag(FlagClusterName, flag.Lookup(FlagClusterName))
@@ -102,6 +108,7 @@ func NewConfig(version string) (*Config, error) {
 		Port:       v.GetInt(FlagPort),
 		Host:       v.GetString(FlagHost),
 		Timeout:    v.GetInt(FlagTimeout),
+		Retries:    v.GetInt(FlagRetries),
 	}
 
 	// To leave the variable empty as nil

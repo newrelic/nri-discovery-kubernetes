@@ -27,7 +27,7 @@ import (
 
 const (
 	nodeName      = "test-node"
-	fakeTokenFile = "./test_data/token" // nolint: gosec  // testing credentials
+	fakeTokenFile = "./test_data/token" //nolint: gosec  // testing credentials
 )
 
 func TestDiscoverer_Run(t *testing.T) {

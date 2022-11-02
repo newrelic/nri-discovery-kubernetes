@@ -33,7 +33,7 @@ const (
 	kubeletMetric          = "/kubelet-metric"
 	kubeletMetricWithDelay = "/kubelet-metric-delay"
 	nodeName               = "test-node"
-	fakeTokenFile          = "./test_data/token" // nolint: gosec  // testing credentials
+	fakeTokenFile          = "./test_data/token" //nolint: gosec  // testing credentials
 	retries                = 3
 )
 
@@ -53,7 +53,9 @@ func TestClientCalls(t *testing.T) {
 	require.NoError(t, err, "Client creation succeeded")
 
 	r, err := kubeletClient.Get(kubeletMetric)
+	require.NoError(t, err, "Client did the request without errors")
 	defer r.Body.Close()
+
 	l.Lock()
 	_, foundHealthz := requests[healthz]
 	_, foundKubelet := requests[kubeletMetric]
@@ -61,7 +63,6 @@ func TestClientCalls(t *testing.T) {
 
 	assert.True(t, foundHealthz, "Client did fallback using API Server as proxy")
 	assert.True(t, foundKubelet, "Clients fetched metrics")
-	assert.NoError(t, err, "Client did the request without errors")
 	assert.Equal(t, r.StatusCode, http.StatusOK, "Client received a 200 status")
 	assert.Len(t, requests, 2, "Kubelet was hit to get health and metrics")
 	assert.Contains(t, requests, healthz, "Client hit kubelet status using local connection")
@@ -85,7 +86,9 @@ func TestClientCallsViaAPIProxy(t *testing.T) {
 	require.NoError(t, err, "Client creation succeeded")
 
 	r, err := kubeletClient.Get(kubeletMetric)
+	require.NoError(t, err, "Client did the request without errors")
 	defer r.Body.Close()
+
 	l.Lock()
 	_, foundHealthz := requests[path.Join(apiProxy, healthz)]
 	_, foundKubelet := requests[path.Join(apiProxy, kubeletMetric)]
@@ -93,7 +96,6 @@ func TestClientCallsViaAPIProxy(t *testing.T) {
 
 	assert.True(t, foundHealthz, "Client did fallback using API Server as proxy")
 	assert.True(t, foundKubelet, "Clients fetched metrics")
-	assert.NoError(t, err, "Client did the request without errors")
 	assert.Equal(t, r.StatusCode, http.StatusOK, "Client received a 200 status")
 	assert.Len(t, requests, 2, "Kubelet was hit to get health and metrics")
 	assert.Contains(t, requests, path.Join(apiProxy, healthz), "Client hit kubelet status using API Server")
@@ -226,10 +228,10 @@ func TestClientTimeoutAndRetries(t *testing.T) {
 	require.NoError(t, err)
 
 	r, err := kubeletClient.Get(kubeletMetricWithDelay)
-	defer r.Body.Close()
 	require.NoError(t, err, "Client created correctly")
-	assert.Equal(t, r.StatusCode, http.StatusOK, "Client request answered successfully")
+	defer r.Body.Close()
 
+	assert.Equal(t, r.StatusCode, http.StatusOK, "Client request answered successfully")
 	assert.Equal(t, 2, delayedRequests, "Client did a successful second retry")
 }
 

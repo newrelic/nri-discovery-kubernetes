@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -92,7 +93,7 @@ func (c *Client) Get(urlPath string) (*http.Response, error) {
 	e := c.endpoint
 	e.Path = path.Join(c.endpoint.Path, urlPath)
 
-	r, err := http.NewRequest(http.MethodGet, e.String(), nil)
+	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, e.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request to: %s. Got error: %w ", e.String(), err)
 	}

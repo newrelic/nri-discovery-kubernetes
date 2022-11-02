@@ -64,22 +64,23 @@ func (kube *kubelet) FindContainers(namespaces []string) ([]ContainerInfo, error
 
 func (kube *kubelet) getPods() ([]corev1.Pod, error) {
 	resp, err := kube.client.Get(podsPath)
-	defer resp.Body.Close()
 	if err != nil {
-		err = fmt.Errorf("failed to execute request against kubelet: %s ", err)
+		err = fmt.Errorf("failed to execute request against kubelet: %w ", err)
 		return []corev1.Pod{}, err
 	}
 
+	defer resp.Body.Close()
+
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		err = fmt.Errorf("failed read the response from kubelet: %s ", err)
+		err = fmt.Errorf("failed read the response from kubelet: %w ", err)
 		return []corev1.Pod{}, err
 	}
 
 	pods := &corev1.PodList{}
 	err = json.Unmarshal(respBody, pods)
 	if err != nil {
-		err = fmt.Errorf("failed to unmarshall result in to list of pods: %s", err)
+		err = fmt.Errorf("failed to unmarshall result in to list of pods: %w", err)
 	}
 	return pods.Items, err
 }
@@ -102,13 +103,11 @@ func getContainers(clusterName string, nodeName string, pods []corev1.Pod) []Con
 	var containers []ContainerInfo
 
 	for _, pod := range pods {
-
 		if pod.Status.Phase != corev1.PodRunning {
 			continue
 		}
 
 		for idx, cs := range pod.Status.ContainerStatuses {
-
 			if cs.State.Running == nil {
 				continue
 			}
