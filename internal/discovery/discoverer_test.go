@@ -105,7 +105,7 @@ func Test_PodsWithMultiplePorts_ReturnsIndexAndName(t *testing.T) {
 func fakeKubeletClient(t *testing.T) kubernetes.Kubelet {
 	t.Helper()
 
-	server := httptest.NewServer(fakePodList(t))
+	server := httptest.NewServer(fakePodListHandler(t))
 
 	k8sClient, cf, inClusterConfig, logger := getTestData(server)
 	httpClient, _ := internalhttp.NewClient(
@@ -159,9 +159,7 @@ func getTestNode(port int) *v1.Node {
 	}
 }
 
-func fakePodList(t *testing.T) http.HandlerFunc {
-	t.Helper()
-
+func fakePodList() corev1.PodList {
 	pod1 := corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -251,13 +249,17 @@ func fakePodList(t *testing.T) http.HandlerFunc {
 		},
 	}
 
-	podList := corev1.PodList{
+	return corev1.PodList{
 		TypeMeta: metav1.TypeMeta{},
 		ListMeta: metav1.ListMeta{},
 		Items:    []corev1.Pod{pod1, pod2},
 	}
+}
 
-	marshaledPodList, err := json.Marshal(podList)
+func fakePodListHandler(t *testing.T) http.HandlerFunc {
+	t.Helper()
+
+	marshaledPodList, err := json.Marshal(fakePodList())
 	require.NoError(t, err)
 
 	return func(rw http.ResponseWriter, r *http.Request) {
