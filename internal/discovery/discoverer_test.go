@@ -2,7 +2,19 @@ package discovery
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strconv"
 	"testing"
+
+	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
+	internalhttp "github.com/newrelic/nri-discovery-kubernetes/internal/http"
+	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -10,8 +22,12 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
+)
+
+const (
+	nodeName      = "test-node"
+	fakeTokenFile = "./test_data/token" //nolint: gosec  // testing credentials
 )
 
 func TestDiscoverer_Run(t *testing.T) {
@@ -47,7 +63,7 @@ func TestDiscoverer_Run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			d := &Discoverer{
 				namespaces: tt.fields.namespaces,
-				kubelet:    fakeKubelet(),
+				kubelet:    fakeKubeletClient(t),
 			}
 			got, err := d.Run()
 			if (err != nil) != tt.wantErr {
@@ -62,7 +78,7 @@ func TestDiscoverer_Run(t *testing.T) {
 func Test_PodsWithMultiplePorts_ReturnsIndexAndName(t *testing.T) {
 	d := &Discoverer{
 		namespaces: []string{"test"},
-		kubelet:    fakeKubelet(),
+		kubelet:    fakeKubeletClient(t),
 	}
 	result, err := d.Run()
 	require.NoError(t, err)
@@ -86,7 +102,64 @@ func Test_PodsWithMultiplePorts_ReturnsIndexAndName(t *testing.T) {
 	assert.EqualValues(t, p["2"], p["third"])
 }
 
-func fakeKubelet() kubernetes.Kubelet {
+func fakeKubeletClient(t *testing.T) kubernetes.Kubelet {
+	t.Helper()
+
+	server := httptest.NewServer(fakePodListHandler(t))
+
+	k8sClient, cf, inClusterConfig, logger := getTestData(server)
+	httpClient, _ := internalhttp.NewClient(
+		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig, logger),
+		internalhttp.WithMaxRetries(5),
+		internalhttp.WithLogger(logger),
+	)
+
+	return kubernetes.New(httpClient, cf)
+}
+
+func getTestData(s *httptest.Server) (*fake.Clientset, *config.Config, *rest.Config, *log.Logger) {
+	u, _ := url.Parse(s.URL)
+	port, _ := strconv.Atoi(u.Port())
+
+	c := fake.NewSimpleClientset(getTestNode(port))
+
+	cf := &config.Config{
+		NodeName: nodeName,
+		Host:     u.Hostname(),
+	}
+
+	inClusterConfig := &rest.Config{
+		Host:            fmt.Sprintf("%s://%s", u.Scheme, u.Host),
+		BearerTokenFile: fakeTokenFile,
+		TLSClientConfig: rest.TLSClientConfig{
+			Insecure: true,
+		},
+	}
+
+	logger := log.New()
+	logger.SetOutput(io.Discard)
+	// Set level to panic might save a few cycles if we don't even attempt to write to io.Discard.
+	logger.SetLevel(log.PanicLevel)
+
+	return c, cf, inClusterConfig, logger
+}
+
+func getTestNode(port int) *v1.Node {
+	return &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: nodeName,
+		},
+		Status: v1.NodeStatus{
+			DaemonEndpoints: v1.NodeDaemonEndpoints{
+				KubeletEndpoint: v1.DaemonEndpoint{
+					Port: int32(port),
+				},
+			},
+		},
+	}
+}
+
+func fakePodList() corev1.PodList {
 	pod1 := corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -176,27 +249,23 @@ func fakeKubelet() kubernetes.Kubelet {
 		},
 	}
 
-	podList := corev1.PodList{
+	return corev1.PodList{
 		TypeMeta: metav1.TypeMeta{},
 		ListMeta: metav1.ListMeta{},
 		Items:    []corev1.Pod{pod1, pod2},
 	}
-
-	client := fakeHTTPClient(podList)
-	k, _ := kubernetes.NewKubeletWithClient(client)
-	return k
 }
 
-func fakeHTTPClient(pods corev1.PodList) http.Client {
-	return &FakeHTTPClient{pods: pods}
-}
+func fakePodListHandler(t *testing.T) http.HandlerFunc {
+	t.Helper()
 
-type FakeHTTPClient struct {
-	pods corev1.PodList
-}
+	marshaledPodList, err := json.Marshal(fakePodList())
+	require.NoError(t, err)
 
-func (k *FakeHTTPClient) Get(path string) ([]byte, error) {
-	return json.Marshal(k.pods)
+	return func(rw http.ResponseWriter, r *http.Request) {
+		_, err := rw.Write(marshaledPodList)
+		require.NoError(t, err)
+	}
 }
 
 func items() map[string]DiscoveredItem {
@@ -204,7 +273,7 @@ func items() map[string]DiscoveredItem {
 		"test": {
 			Variables: VariablesMap{
 				cluster:                   "",
-				node:                      "",
+				node:                      nodeName,
 				nodeIP:                    "10.0.0.0",
 				namespace:                 "test",
 				podName:                   "test",
@@ -218,7 +287,7 @@ func items() map[string]DiscoveredItem {
 			},
 			MetricAnnotations: AnnotationsMap{
 				cluster:              "",
-				node:                 "",
+				node:                 nodeName,
 				namespace:            "test",
 				podName:              "test",
 				name:                 "test",
@@ -236,7 +305,7 @@ func items() map[string]DiscoveredItem {
 		"fake": {
 			Variables: VariablesMap{
 				cluster:                   "",
-				node:                      "",
+				node:                      nodeName,
 				nodeIP:                    "10.0.0.0",
 				namespace:                 "fake",
 				podName:                   "fake",
@@ -250,7 +319,7 @@ func items() map[string]DiscoveredItem {
 			},
 			MetricAnnotations: AnnotationsMap{
 				cluster:              "",
-				node:                 "",
+				node:                 nodeName,
 				namespace:            "fake",
 				podName:              "fake",
 				name:                 "fake",

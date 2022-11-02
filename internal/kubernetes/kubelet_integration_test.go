@@ -1,16 +1,22 @@
 // Copyright 2021 New Relic Corporation. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build integration
 // +build integration
 
 package kubernetes_test
 
 import (
 	"context"
+	"io"
 	"net/url"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -169,21 +175,32 @@ func singleNodeClusterKubelet(t *testing.T) (kubernetes.Kubelet, *k8s.Clientset)
 	clusterURL, err := url.Parse(cfg.Host)
 	require.NoErrorf(t, err, "parsing API URL")
 
-	kubeletHost := clusterURL.Hostname()
-	kubeletPort := 10250
-	useTLS := true
-	autoConfig := false
-	discoveryTimeout := 5 * time.Minute
+	conf := &config.Config{
+		Port:     10250,
+		Host:     clusterURL.Hostname(),
+		NodeName: nodes.Items[0].Name,
+		TLS:      true,
+		Timeout:  5 * 60 * 1000, // 5 minutes in miliseconds
+	}
 
-	kubelet, err := kubernetes.NewKubelet(kubeletHost, kubeletPort, useTLS, autoConfig, discoveryTimeout)
-	require.NoErrorf(t, err, "creating kubelet client")
+	logger := log.New()
+	logger.SetOutput(io.Discard)
+	// Set level to panic might save a few cycles if we don't even attempt to write to io.Discard.
+	logger.SetLevel(log.PanicLevel)
+
+	connector := http.DefaultConnector(clientset, conf, cfg, logger)
+
+	httpClient, err := http.NewClient(connector, http.WithMaxRetries(5))
+	require.NoErrorf(t, err, "creating HTTP Client")
+
+	kubelet := kubernetes.New(httpClient, conf)
 
 	return kubelet, clientset
 }
 
 const (
 	// Arbitrary amount of time to let tests exit cleanly before main process terminates.
-	timeoutGracePeriod = 10 * time.Second
+	timeoutGracePeriod = 200 * time.Millisecond
 	testPrefix         = "test-"
 )
 

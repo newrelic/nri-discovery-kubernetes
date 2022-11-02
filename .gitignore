@@ -5,7 +5,9 @@ target
 coverage.xml
 *.heap
 bin
-deploy/gcp.yml
+
+# Development
+/values-dev.yaml
 
 # CICD
 dist/

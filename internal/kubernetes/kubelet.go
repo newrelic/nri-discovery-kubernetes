@@ -3,25 +3,17 @@ package kubernetes
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
-	"os"
-	"path/filepath"
+	"io"
 	"strconv"
-	"time"
 
 	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
-	podsPath          = "/pods"
-	clusterNameEnvVar = "CLUSTER_NAME"
-	nodeNameEnvVar    = "NRK8S_NODE_NAME"
+	podsPath = "/pods"
 )
 
 type (
@@ -56,7 +48,7 @@ type Kubelet interface {
 }
 
 type kubelet struct {
-	client      http.Client
+	client      *http.Client
 	NodeName    string
 	ClusterName string
 }
@@ -73,14 +65,22 @@ func (kube *kubelet) FindContainers(namespaces []string) ([]ContainerInfo, error
 func (kube *kubelet) getPods() ([]corev1.Pod, error) {
 	resp, err := kube.client.Get(podsPath)
 	if err != nil {
-		err = fmt.Errorf("failed to execute request against kubelet: %s ", err)
+		err = fmt.Errorf("failed to execute request against kubelet: %w ", err)
+		return []corev1.Pod{}, err
+	}
+
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		err = fmt.Errorf("failed read the response from kubelet: %w ", err)
 		return []corev1.Pod{}, err
 	}
 
 	pods := &corev1.PodList{}
-	err = json.Unmarshal(resp, pods)
+	err = json.Unmarshal(respBody, pods)
 	if err != nil {
-		err = fmt.Errorf("failed to unmarshall result in to list of pods: %s", err)
+		err = fmt.Errorf("failed to unmarshall result in to list of pods: %w", err)
 	}
 	return pods.Items, err
 }
@@ -103,13 +103,11 @@ func getContainers(clusterName string, nodeName string, pods []corev1.Pod) []Con
 	var containers []ContainerInfo
 
 	for _, pod := range pods {
-
 		if pod.Status.Phase != corev1.PodRunning {
 			continue
 		}
 
 		for idx, cs := range pod.Status.ContainerStatuses {
-
 			if cs.State.Running == nil {
 				continue
 			}
@@ -152,91 +150,11 @@ func getPorts(pod corev1.Pod, containerIndex int) PortsMap {
 	return ports
 }
 
-func getClusterName() string {
-	// there is no way at the moment to get the cluster name from the Kubelet API
-	clusterName := os.Getenv(clusterNameEnvVar)
-	return clusterName
-}
-
-// NewKubelet validates and constructs Kubelet client.
-func NewKubelet(host string, port int, useTLS bool, autoConfig bool, timeout time.Duration) (Kubelet, error) {
-	restConfig, err := rest.InClusterConfig()
-	// not inside the cluster?
-	if err != nil {
-		kConfigPath := filepath.Join(utils.HomeDir(), ".kube", "config")
-		restConfig, err = clientcmd.BuildConfigFromFlags("", kConfigPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get cluster configuration: %s", err)
-		}
+// New validates and constructs Kubelet client.
+func New(client *http.Client, config *config.Config) Kubelet {
+	return &kubelet{
+		client:      client,
+		ClusterName: config.ClusterName,
+		NodeName:    config.NodeName,
 	}
-
-	clusterName := getClusterName()
-	nodeName, isNodeNameSet := os.LookupEnv(nodeNameEnvVar)
-	if autoConfig && isNodeNameSet {
-		client, err := http.NewKubeletClient(nodeName, timeout)
-		if err != nil {
-			logrus.WithError(err).Warn("failed to initialize kubelet client")
-		} else {
-			kubelet := &kubelet{
-				client:      client,
-				NodeName:    nodeName,
-				ClusterName: clusterName,
-			}
-			return kubelet, nil
-		}
-	}
-
-	// host provided by cmd line arg has higher precedence.
-	// if host cmd line arg is not provided use NRK8S_NODE_NAME in case is set, otherwise localhost.
-	kubeletHost := host
-	if isNodeNameSet && !config.IsFlagPassed(config.Host) {
-		kubeletHost = nodeName
-	}
-
-	hostURL := makeURL(kubeletHost, port, useTLS)
-
-	// Allow kubelet to use self-signed serving certificate.
-	restConfig.Insecure = true
-
-	// When Insecure == true, make sure no CA certificate is set, otherwise creating transport fails.
-	//
-	// https://github.com/kubernetes/client-go/blob/09dbda0b387fa7a9f71c5086e9f8f0529d7a0436/transport/transport.go#L66
-	restConfig.CAFile = ""
-	restConfig.CAData = nil
-
-	tr, err := rest.TransportFor(restConfig)
-	if err != nil {
-		return nil, fmt.Errorf("creating HTTP transport config from kubeconfig: %w", err)
-	}
-
-	httpClient := http.NewClient(hostURL, tr)
-
-	kubelet := &kubelet{
-		client:      httpClient,
-		NodeName:    kubeletHost,
-		ClusterName: clusterName,
-	}
-
-	return kubelet, nil
-}
-
-// NewKubeletWithClient constructs Kubelet client with given HTTP client.
-func NewKubeletWithClient(httpClient http.Client) (Kubelet, error) {
-	k := &kubelet{
-		client: httpClient,
-	}
-
-	return k, nil
-}
-
-func makeURL(host string, port int, useTLS bool) url.URL {
-	scheme := "http"
-	if useTLS {
-		scheme = "https"
-	}
-	kubeletURL := url.URL{
-		Scheme: scheme,
-		Host:   host + ":" + strconv.Itoa(port),
-	}
-	return kubeletURL
 }

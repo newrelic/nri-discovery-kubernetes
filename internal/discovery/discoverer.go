@@ -7,7 +7,7 @@ import (
 	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
 )
 
-// Replacement defines actions to take to format entity name
+// Replacement defines actions to take to format entity name.
 type Replacement struct {
 	Action       string `json:"action"`
 	Match        string `json:"match"`
@@ -21,23 +21,23 @@ type (
 	AnnotationsMap = VariablesMap
 )
 
-// DiscoveredItem defines the structure of a single item that has been "discovered"
+// DiscoveredItem defines the structure of a single item that has been "discovered".
 type DiscoveredItem struct {
 	Variables         VariablesMap   `json:"variables"`
 	MetricAnnotations AnnotationsMap `json:"metricAnnotations"`
 	EntityRewrites    []Replacement  `json:"entityRewrites"`
 }
 
-// Output defines the final output of the discovery executable
+// Output defines the final output of the discovery executable.
 type Output []DiscoveredItem
 
-// Discoverer implements the specific discovery mechanism
+// Discoverer implements the specific discovery mechanism.
 type Discoverer struct {
 	namespaces []string
 	kubelet    kubernetes.Kubelet
 }
 
-// NewDiscoverer creates a new discoverer implementation
+// NewDiscoverer creates a new discoverer implementation.
 func NewDiscoverer(namespaces []string, kubelet kubernetes.Kubelet) *Discoverer {
 	return &Discoverer{
 		namespaces: namespaces,
@@ -45,17 +45,17 @@ func NewDiscoverer(namespaces []string, kubelet kubernetes.Kubelet) *Discoverer 
 	}
 }
 
-// Run executes the discovery mechanism
+// Run executes the discovery mechanism.
 func (d *Discoverer) Run() (Output, error) {
 	pods, err := d.kubelet.FindContainers(d.namespaces)
 	return processContainers(pods), err
 }
 
 func processContainers(containers []kubernetes.ContainerInfo) Output {
-	// default empty, instead of nil
+	// default empty, instead of nil.
 	output := Output{}
 	for _, c := range containers {
-		// new map for each container
+		// new map for each container.
 		discoveredProperties := make(VariablesMap)
 
 		discoveredProperties[namespace] = c.Namespace

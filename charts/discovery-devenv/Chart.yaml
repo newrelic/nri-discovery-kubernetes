@@ -1,0 +1,6 @@
+apiVersion: v2
+name: discovery-devenv
+description: A development environment for nri-discovery-kubernetes
+
+type: application
+version: 0.1.0

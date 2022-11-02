@@ -1,103 +1,104 @@
 package http
 
 import (
+	"context"
 	"errors"
-	"io/ioutil"
+	"fmt"
 	"net/http"
 	"net/url"
-	"os"
-	"time"
+	"path"
 
-	"github.com/newrelic/nri-kubernetes/v2/src/client"
-	kubeletclient "github.com/newrelic/nri-kubernetes/v2/src/kubelet/client"
-	"github.com/sirupsen/logrus"
+	"github.com/sethgrid/pester"
+	log "github.com/sirupsen/logrus"
 )
 
-// Client represents functionality of simple HTTP client.
-type Client interface {
-	Get(path string) ([]byte, error)
+const (
+	healthzPath             = "/healthz"
+	defaultHTTPKubeletPort  = 10255
+	defaultHTTPSKubeletPort = 10250
+)
+
+var (
+	ErrNoConnector = errors.New("connector should not be nil")
+)
+
+// Client implements a client for Kubelet, capable of retrieving prometheus metrics from a given endpoint.
+type Client struct {
+	logger   *log.Logger
+	doer     Doer
+	endpoint url.URL
+	retries  int
 }
 
-type httpClient struct {
-	http http.Client
-	url  url.URL
+type OptionFunc func(kc *Client) error
+
+// WithLogger returns an OptionFunc to change the logger from the default noop logger.
+func WithLogger(logger *log.Logger) OptionFunc {
+	return func(kubeletClient *Client) error {
+		kubeletClient.logger = logger
+		return nil
+	}
 }
 
-func (c *httpClient) Get(path string) ([]byte, error) {
-	endpoint := c.url.String() + path
-	req, _ := http.NewRequest(http.MethodGet, endpoint, nil)
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, err
+// WithMaxRetries returns an OptionFunc to change the number of retries used int Pester Client.
+func WithMaxRetries(retries int) OptionFunc {
+	return func(kubeletClient *Client) error {
+		kubeletClient.retries = retries
+		return nil
+	}
+}
+
+// NewClient builds a Client using the given options.
+func NewClient(connector Connector, opts ...OptionFunc) (*Client, error) {
+	if connector == nil {
+		return nil, ErrNoConnector
 	}
 
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			logrus.WithError(err).Warn("closing response body")
+	c := &Client{
+		logger: log.New(),
+	}
+
+	for i, opt := range opts {
+		if err := opt(c); err != nil {
+			return nil, fmt.Errorf("applying option #%d: %w", i, err)
 		}
-	}()
-
-	buff, _ := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(resp.Status)
 	}
 
-	return buff, nil
-}
-
-// NewClient constructs new simple HTTP client with given base URL.
-func NewClient(url url.URL, tr http.RoundTripper) Client {
-	return &httpClient{
-		http: http.Client{
-			Transport: tr,
-		},
-		url: url,
-	}
-}
-
-// kubeletClient addapts the nri-kubernetes kubelet client.
-type kubeletClient struct {
-	client client.HTTPClient
-}
-
-// NewKubeletClient creates a new kubeletClient instance.
-func NewKubeletClient(nodeName string, timeout time.Duration) (Client, error) {
-	logger := logrus.New()
-	logger.SetOutput(os.Stderr)
-
-	d, err := kubeletclient.NewDiscoverer(nodeName, logger)
+	conn, err := connector.Connect()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("connecting to kubelet using the connector: %w", err)
 	}
 
-	client, err := d.Discover(timeout)
-	if err != nil {
-		return nil, err
-	}
-
-	return &kubeletClient{
-		client: client,
-	}, nil
-}
-
-func (kc *kubeletClient) Get(path string) ([]byte, error) {
-	resp, err := kc.client.Do(http.MethodGet, path)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			logrus.WithError(err).Warn("closing response body")
+	if client, ok := conn.client.(*http.Client); ok {
+		httpPester := pester.NewExtendedClient(client)
+		httpPester.Backoff = pester.LinearBackoff
+		httpPester.MaxRetries = c.retries
+		httpPester.LogHook = func(e pester.ErrEntry) {
+			c.logger.Debugf("getting data from kubelet: %v", e)
 		}
-	}()
-
-	buff, _ := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(resp.Status)
+		c.doer = httpPester
+	} else {
+		c.logger.Debugf("running kubelet client without pester")
+		c.doer = conn.client
 	}
 
-	return buff, nil
+	c.endpoint = conn.url
+
+	return c, nil
+}
+
+// Get implements Getter interface by sending GET request using configured client.
+func (c *Client) Get(urlPath string) (*http.Response, error) {
+	// Notice that this is the client to interact with kubelet. In case of CAdvisor the MetricFamiliesGetFunc is used
+	e := c.endpoint
+	e.Path = path.Join(c.endpoint.Path, urlPath)
+
+	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, e.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request to: %s. Got error: %w ", e.String(), err)
+	}
+
+	c.logger.Debugf("Calling Kubelet endpoint: %s", r.URL.String())
+
+	return c.doer.Do(r)
 }
