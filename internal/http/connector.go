@@ -236,7 +236,8 @@ func tripperWithBearerTokenAndRefresh(tokenFile string) (http.RoundTripper, erro
 	// The DefaultTransport is casted to an http.RoundTripper interface, so we need to convert it back.
 	t := http.DefaultTransport.(*http.Transport).Clone()
 	t.TLSClientConfig.InsecureSkipVerify = true
-	t.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	// Kubelet cert is usually not issued to `localhost` so it fails when you want to connect using that hostname.
+	t.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // nolint: gosec
 
 	// Use the default kubernetes Bearer token authentication RoundTripper
 	tripperWithBearerRefreshing, err := transport.NewBearerAuthWithRefreshRoundTripper("", tokenFile, t)
