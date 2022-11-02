@@ -3,17 +3,18 @@ package discovery
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
-	internalhttp "github.com/newrelic/nri-discovery-kubernetes/internal/http"
-	log "github.com/sirupsen/logrus"
 	"io"
-	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/rest"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"testing"
+
+	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
+	internalhttp "github.com/newrelic/nri-discovery-kubernetes/internal/http"
+	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

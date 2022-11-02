@@ -8,14 +8,15 @@ package kubernetes_test
 
 import (
 	"context"
-	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
-	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/url"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
+	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"

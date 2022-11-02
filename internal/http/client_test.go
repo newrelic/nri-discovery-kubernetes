@@ -2,8 +2,6 @@ package http_test
 
 import (
 	"fmt"
-	internalhttp "github.com/newrelic/nri-discovery-kubernetes/internal/http"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +12,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	internalhttp "github.com/newrelic/nri-discovery-kubernetes/internal/http"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
