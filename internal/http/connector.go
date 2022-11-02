@@ -105,7 +105,7 @@ func (dp *defaultConnector) checkLocalConnection(tripperWithBearerTokenRefreshin
 		}
 	default:
 		dp.logger.Infof("Checking both HTTP and HTTPS since the scheme was not detected automatically, " +
-			"you can set set kubelet.scheme to avoid this behaviour")
+			"you can set set kubelet.scheme to avoid this behaviour") // nolint: misspell // collision between spelling actions and American/GB English...
 
 		if conn, err = dp.checkConnectionHTTPS(hostURL, tripperWithBearerTokenRefreshing); err == nil {
 			return conn, nil
