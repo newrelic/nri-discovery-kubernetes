@@ -40,7 +40,7 @@ func main() {
 
 	connector := http.DefaultConnector(k8s, config, k8sConfig, log.New())
 
-	httpClient, err := http.New(connector, http.WithMaxRetries(5)) // TODO: Retries are hardcoded
+	httpClient, err := http.NewClient(connector, http.WithMaxRetries(5)) // TODO: Retries are hardcoded
 	if err != nil {
 		log.Printf("building kubelet client: %s", err)
 		os.Exit(7)

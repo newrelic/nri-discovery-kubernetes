@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -16,10 +17,14 @@ const (
 	defaultHTTPSKubeletPort = 10250
 )
 
+var (
+	ErrNoConnector = errors.New("connector should not be nil")
+)
+
 // Client implements a client for Kubelet, capable of retrieving prometheus metrics from a given endpoint.
 type Client struct {
 	logger   *log.Logger
-	doer     HTTPDoer
+	doer     Doer
 	endpoint url.URL
 	retries  int
 }
@@ -42,8 +47,12 @@ func WithMaxRetries(retries int) OptionFunc {
 	}
 }
 
-// New builds a Client using the given options.
-func New(connector Connector, opts ...OptionFunc) (*Client, error) {
+// NewClient builds a Client using the given options.
+func NewClient(connector Connector, opts ...OptionFunc) (*Client, error) {
+	if connector == nil {
+		return nil, ErrNoConnector
+	}
+
 	c := &Client{
 		logger: log.New(),
 	}
@@ -52,10 +61,6 @@ func New(connector Connector, opts ...OptionFunc) (*Client, error) {
 		if err := opt(c); err != nil {
 			return nil, fmt.Errorf("applying option #%d: %w", i, err)
 		}
-	}
-
-	if connector == nil {
-		return nil, fmt.Errorf("connector should not be nil")
 	}
 
 	conn, err := connector.Connect()
@@ -81,7 +86,7 @@ func New(connector Connector, opts ...OptionFunc) (*Client, error) {
 	return c, nil
 }
 
-// Get implements HTTPGetter interface by sending GET request using configured client.
+// Get implements Getter interface by sending GET request using configured client.
 func (c *Client) Get(urlPath string) (*http.Response, error) {
 	// Notice that this is the client to interact with kubelet. In case of CAdvisor the MetricFamiliesGetFunc is used
 	e := c.endpoint

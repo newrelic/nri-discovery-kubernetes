@@ -32,7 +32,7 @@ const (
 	kubeletMetric          = "/kubelet-metric"
 	kubeletMetricWithDelay = "/kubelet-metric-delay"
 	nodeName               = "test-node"
-	fakeTokenFile          = "./test_data/token"
+	fakeTokenFile          = "./test_data/token" // nolint: gosec  // testing credentials
 	retries                = 3
 )
 
@@ -43,40 +43,30 @@ func TestClientCalls(t *testing.T) {
 
 	k8sClient, cf, inClusterConfig, logger := getTestData(s)
 
-	kubeletClient, err := internalhttp.New(
+	kubeletClient, err := internalhttp.NewClient(
 		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig, logger),
 		internalhttp.WithMaxRetries(retries),
 		internalhttp.WithLogger(logger),
 	)
 
-	t.Run("creation_succeeds_receiving_200", func(t *testing.T) {
-		require.NoError(t, err)
-	})
+	require.NoError(t, err, "Client creation succeeded")
 
-	t.Run("hits_only_local_kubelet", func(t *testing.T) {
-		require.NotNil(t, requests)
+	r, err := kubeletClient.Get(kubeletMetric)
+	l.Lock()
+	_, foundHealthz := requests[healthz]
+	_, foundKubelet := requests[kubeletMetric]
+	l.Unlock()
 
-		l.Lock()
-		_, found := requests[healthz]
-		l.Unlock()
-		assert.True(t, found)
-	})
-
-	t.Run("hits_kubelet_metric", func(t *testing.T) {
-		r, err := kubeletClient.Get(kubeletMetric)
-		assert.NoError(t, err)
-		assert.Equal(t, r.StatusCode, http.StatusOK)
-
-		l.Lock()
-		_, found := requests[kubeletMetric]
-		l.Unlock()
-		assert.True(t, found)
-	})
+	assert.True(t, foundHealthz, "Client did fallback using API Server as proxy")
+	assert.True(t, foundKubelet, "Clients fetched metrics")
+	assert.NoError(t, err, "Client did the request without errors")
+	assert.Equal(t, r.StatusCode, http.StatusOK, "Client received a 200 status")
+	assert.Len(t, requests, 2, "Kubelet was hit to get health and metrics")
+	assert.Contains(t, requests, healthz, "Client hit kubelet status using local connection")
+	assert.Contains(t, requests, kubeletMetric, "Client hit kubelet metrics")
 }
 
 func TestClientCallsViaAPIProxy(t *testing.T) {
-	t.Parallel()
-
 	l := &sync.Mutex{}
 
 	s, requests := testHTTPSServerWithEndpoints(t, l, []string{path.Join(apiProxy, healthz), path.Join(apiProxy, prometheusMetric), path.Join(apiProxy, kubeletMetric)})
@@ -84,67 +74,49 @@ func TestClientCallsViaAPIProxy(t *testing.T) {
 	k8sClient, cf, inClusterConfig, logger := getTestData(s)
 	cf.Host = "invalid" // disabling local connection
 
-	kubeletClient, err := internalhttp.New(
+	kubeletClient, err := internalhttp.NewClient(
 		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig, logger),
 		internalhttp.WithMaxRetries(retries),
 		internalhttp.WithLogger(logger),
 	)
 
-	t.Run("creation_succeeds_receiving_200", func(t *testing.T) {
-		t.Parallel()
+	require.NoError(t, err, "Client creation succeeded")
 
-		require.NoError(t, err)
-	})
+	r, err := kubeletClient.Get(kubeletMetric)
+	l.Lock()
+	_, foundHealthz := requests[path.Join(apiProxy, healthz)]
+	_, foundKubelet := requests[path.Join(apiProxy, kubeletMetric)]
+	l.Unlock()
 
-	t.Run("hits_api_server_as_fallback", func(t *testing.T) {
-		t.Parallel()
-
-		require.NotNil(t, requests)
-
-		l.Lock()
-		_, found := requests[path.Join(apiProxy, healthz)]
-		l.Unlock()
-		assert.True(t, found)
-	})
-
-	t.Run("hits_kubelet_metric_through_proxy", func(t *testing.T) {
-		t.Parallel()
-
-		r, err := kubeletClient.Get(kubeletMetric)
-		assert.NoError(t, err)
-		assert.Equal(t, r.StatusCode, http.StatusOK)
-
-		l.Lock()
-		_, found := requests[path.Join(apiProxy, kubeletMetric)]
-		l.Unlock()
-		assert.True(t, found)
-	})
+	assert.True(t, foundHealthz, "Client did fallback using API Server as proxy")
+	assert.True(t, foundKubelet, "Clients fetched metrics")
+	assert.NoError(t, err, "Client did the request without errors")
+	assert.Equal(t, r.StatusCode, http.StatusOK, "Client received a 200 status")
+	assert.Len(t, requests, 2, "Kubelet was hit to get health and metrics")
+	assert.Contains(t, requests, path.Join(apiProxy, healthz), "Client hit kubelet status using API Server")
+	assert.Contains(t, requests, path.Join(apiProxy, kubeletMetric), "Client hit kubelet metrics")
 }
 
 func TestConfigPrecedence(t *testing.T) {
 	t.Parallel()
 
-	t.Run("connector_takes_port", func(t *testing.T) {
-		t.Parallel()
+	l := &sync.Mutex{}
 
-		l := &sync.Mutex{}
+	s, _ := testHTTPServerWithEndpoints(t, l, []string{healthz, prometheusMetric, kubeletMetric})
+	_, cf, inClusterConfig, logger := getTestData(s)
 
-		s, _ := testHTTPServerWithEndpoints(t, l, []string{healthz, prometheusMetric, kubeletMetric})
-		_, cf, inClusterConfig, logger := getTestData(s)
+	// We use an empty client, but the connector is retrieving the port from the config.
+	k8sClient := fake.NewSimpleClientset()
+	u, _ := url.Parse(s.URL)
+	port, _ := strconv.Atoi(u.Port())
+	cf.Port = port
 
-		// We use an empty client, but the connector is retrieving the port from the config.
-		k8sClient := fake.NewSimpleClientset()
-		u, _ := url.Parse(s.URL)
-		port, _ := strconv.Atoi(u.Port())
-		cf.Port = port
-
-		_, err := internalhttp.New(
-			internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig, logger),
-			internalhttp.WithMaxRetries(retries),
-			internalhttp.WithLogger(logger),
-		)
-		require.NoError(t, err)
-	})
+	_, err := internalhttp.NewClient(
+		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig, logger),
+		internalhttp.WithMaxRetries(retries),
+		internalhttp.WithLogger(logger),
+	)
+	require.NoError(t, err)
 }
 
 func TestClientFailingProbingHTTP(t *testing.T) {
@@ -156,40 +128,27 @@ func TestClientFailingProbingHTTP(t *testing.T) {
 
 	c, cf, inClusterConfig, logger := getTestData(s)
 
-	_, err := internalhttp.New(
+	_, err := internalhttp.NewClient(
 		internalhttp.DefaultConnector(c, cf, inClusterConfig, logger),
 		internalhttp.WithMaxRetries(retries),
 		internalhttp.WithLogger(logger),
 	)
 
-	t.Run("fails_receiving_404", func(t *testing.T) {
-		t.Parallel()
+	assert.Error(t, err, "Client fails with error")
 
-		assert.Error(t, err)
-	})
+	l.Lock()
+	_, foundLocalHealth := requests[healthz]
+	_, foundAPIServerHealth := requests[path.Join(apiProxy, healthz)]
+	l.Unlock()
 
-	t.Run("hits_both_api_server_and_local_kubelet", func(t *testing.T) {
-		t.Parallel()
+	assert.True(t, foundLocalHealth, "Client hit Health though Local Connector")
+	assert.True(t, foundAPIServerHealth, "Client hit Health though API Server proxy")
 
-		require.NotNil(t, requests)
+	data, err := os.ReadFile(fakeTokenFile)
+	require.NoError(t, err)
 
-		l.Lock()
-		_, found := requests[path.Join(apiProxy, healthz)]
-		l.Unlock()
-		assert.True(t, found)
-
-		l.Lock()
-		_, found = requests[healthz]
-		l.Unlock()
-		assert.True(t, found)
-	})
-
-	t.Run("does_not_attach_bearer_token", func(t *testing.T) {
-		t.Parallel()
-
-		var expectedEmptySlice []string
-		assert.Equal(t, expectedEmptySlice, requests[healthz].Header["Authorization"])
-	})
+	assert.Nil(t, requests[healthz].Header["Authorization"], "Client does not leak Bearer token")
+	assert.Equal(t, "Bearer "+string(data), requests[path.Join(apiProxy, healthz)].Header["Authorization"][0], "Client send token to API Server")
 }
 
 func TestClientFailingProbingHTTPS(t *testing.T) {
@@ -202,66 +161,52 @@ func TestClientFailingProbingHTTPS(t *testing.T) {
 	c, cf, inClusterConfig, logger := getTestData(s)
 	cf.TLS = true
 
-	_, err := internalhttp.New(
+	_, err := internalhttp.NewClient(
 		internalhttp.DefaultConnector(c, cf, inClusterConfig, logger),
 		internalhttp.WithMaxRetries(retries),
 		internalhttp.WithLogger(logger),
 	)
 
-	t.Run("fails_receiving_404", func(t *testing.T) {
-		t.Parallel()
+	assert.Error(t, err, "Client fails with error")
 
-		assert.Error(t, err)
-	})
+	l.Lock()
+	_, foundLocalHealth := requests[healthz]
+	_, foundAPIServerHealth := requests[path.Join(apiProxy, healthz)]
+	l.Unlock()
 
-	t.Run("hits_both_api_server_and_local_kubelet", func(t *testing.T) {
-		t.Parallel()
+	assert.True(t, foundLocalHealth, "Client hit Health though Local Connector")
+	assert.True(t, foundAPIServerHealth, "Client hit Health though API Server proxy")
 
-		require.NotNil(t, requests)
+	data, err := os.ReadFile(fakeTokenFile)
+	require.NoError(t, err)
 
-		l.Lock()
-		_, found := requests[path.Join(apiProxy, healthz)]
-		l.Unlock()
-		assert.True(t, found)
-
-		l.Lock()
-		_, found = requests[healthz]
-		l.Unlock()
-		assert.True(t, found)
-	})
-
-	t.Run("does_attach_bearer_token", func(t *testing.T) {
-		t.Parallel()
-
-		require.NotNil(t, requests)
-		data, err := os.ReadFile(fakeTokenFile)
-
-		require.NoError(t, err)
-
-		for _, v := range requests {
-			assert.Equal(t, "Bearer "+string(data), v.Header["Authorization"][0])
-		}
-	})
+	// All request have the token as they are sent through HTTPS
+	for _, v := range requests {
+		assert.Equal(t, "Bearer "+string(data), v.Header["Authorization"][0], "Client sent Bearer token")
+	}
 }
 
 func TestClientTimeoutAndRetries(t *testing.T) {
+	t.Parallel()
+
 	timeout := 200
 
 	l := &sync.Mutex{}
-	var requestsReceived int
+	var delayedRequests int
 
 	s := httptest.NewServer(http.HandlerFunc(
 		func(rw http.ResponseWriter, r *http.Request) {
-			// We want to lock the first request to the lagging endpoint.
 			l.Lock()
-			if r.RequestURI == kubeletMetricWithDelay && requestsReceived == 0 {
-				requestsReceived++
-				l.Unlock()
-				time.Sleep(time.Duration(timeout) * 2 * time.Millisecond)
-				rw.WriteHeader(200)
-				return
+			delayRequest := false
+			if r.RequestURI == kubeletMetricWithDelay {
+				delayedRequests++
+				delayRequest = delayedRequests == 1 // We want to lock only the first request to the lagging endpoint.
 			}
 			l.Unlock()
+
+			if delayRequest {
+				time.Sleep(time.Duration(timeout) * 2 * time.Millisecond)
+			}
 			rw.WriteHeader(200)
 		},
 	))
@@ -270,21 +215,18 @@ func TestClientTimeoutAndRetries(t *testing.T) {
 
 	cf.Timeout = timeout
 
-	kubeletClient, err := internalhttp.New(
+	kubeletClient, err := internalhttp.NewClient(
 		internalhttp.DefaultConnector(c, cf, inClusterConfig, logger),
 		internalhttp.WithMaxRetries(2),
 	)
 
 	require.NoError(t, err)
 
-	t.Run("gets_200_after_retry", func(t *testing.T) {
-		r, err := kubeletClient.Get(kubeletMetricWithDelay)
-		require.NoError(t, err)
-		assert.Equal(t, r.StatusCode, http.StatusOK)
+	r, err := kubeletClient.Get(kubeletMetricWithDelay)
+	require.NoError(t, err, "Client created correctly")
+	assert.Equal(t, r.StatusCode, http.StatusOK, "Client request answered successfully")
 
-		// 1 because it has to fail the first lagged request
-		assert.Equal(t, requestsReceived, 1)
-	})
+	assert.Equal(t, 2, delayedRequests, "Client did a successful second retry")
 }
 
 func TestClientOptions(t *testing.T) {
@@ -296,7 +238,7 @@ func TestClientOptions(t *testing.T) {
 
 	k8sClient, cf, inClusterConfig, logger := getTestData(s)
 
-	_, err := internalhttp.New(
+	_, err := internalhttp.NewClient(
 		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig, logger),
 		internalhttp.WithMaxRetries(retries),
 		internalhttp.WithLogger(logger),

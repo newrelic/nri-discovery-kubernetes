@@ -26,7 +26,7 @@ import (
 
 const (
 	nodeName      = "test-node"
-	fakeTokenFile = "./test_data/token"
+	fakeTokenFile = "./test_data/token" // nolint: gosec  // testing credentials
 )
 
 func TestDiscoverer_Run(t *testing.T) {
@@ -104,10 +104,10 @@ func Test_PodsWithMultiplePorts_ReturnsIndexAndName(t *testing.T) {
 func fakeKubeletClient(t *testing.T) kubernetes.Kubelet {
 	t.Helper()
 
-	server := httptest.NewServer(fakePodList())
+	server := httptest.NewServer(fakePodList(t))
 
 	k8sClient, cf, inClusterConfig, logger := getTestData(server)
-	httpClient, _ := internalhttp.New(
+	httpClient, _ := internalhttp.NewClient(
 		internalhttp.DefaultConnector(k8sClient, cf, inClusterConfig, logger),
 		internalhttp.WithMaxRetries(5),
 		internalhttp.WithLogger(logger),
@@ -158,7 +158,9 @@ func getTestNode(port int) *v1.Node {
 	}
 }
 
-func fakePodList() http.HandlerFunc {
+func fakePodList(t *testing.T) http.HandlerFunc {
+	t.Helper()
+
 	pod1 := corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -254,10 +256,12 @@ func fakePodList() http.HandlerFunc {
 		Items:    []corev1.Pod{pod1, pod2},
 	}
 
-	marshaledPodList, _ := json.Marshal(podList)
+	marshaledPodList, err := json.Marshal(podList)
+	require.NoError(t, err)
 
 	return func(rw http.ResponseWriter, r *http.Request) {
-		rw.Write(marshaledPodList)
+		_, err := rw.Write(marshaledPodList)
+		require.NoError(t, err)
 	}
 }
 

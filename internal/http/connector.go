@@ -158,7 +158,7 @@ func (dp *defaultConnector) schemeFor(c *config.Config) string {
 
 type connParams struct {
 	url    url.URL
-	client HTTPDoer
+	client Doer
 }
 
 func (dp *defaultConnector) checkConnectionAPIProxy(apiServer string, nodeName string, tripperAPIproxy http.RoundTripper) (*connParams, error) {
@@ -275,7 +275,7 @@ func (dp *defaultConnector) defaultConnParamsHTTPS(hostURL string, tripper http.
 
 type fixedConnector struct {
 	URL    url.URL
-	Client HTTPDoer
+	Client Doer
 }
 
 // Connect return connParams without probing any endpoint.
@@ -287,7 +287,7 @@ func (mc *fixedConnector) Connect() (*connParams, error) {
 }
 
 // StaticConnector returns a fixed connector that does not check the connection when calling .Connect().
-func StaticConnector(client HTTPDoer, u url.URL) Connector {
+func StaticConnector(client Doer, u url.URL) Connector {
 	return &fixedConnector{
 		URL:    u,
 		Client: client,

@@ -189,7 +189,7 @@ func singleNodeClusterKubelet(t *testing.T) (kubernetes.Kubelet, *k8s.Clientset)
 
 	connector := http.DefaultConnector(clientset, conf, cfg, logger)
 
-	httpClient, err := http.New(connector, http.WithMaxRetries(5))
+	httpClient, err := http.NewClient(connector, http.WithMaxRetries(5))
 	require.NoErrorf(t, err, "creating HTTP Client")
 
 	kubelet := kubernetes.New(httpClient, conf)
