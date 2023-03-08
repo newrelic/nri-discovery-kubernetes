@@ -1,8 +1,0 @@
-FROM alpine:3.16
-
-RUN apk add --no-cache --upgrade ca-certificates
-
-USER nobody
-COPY nri-discovery-kubernetes /bin/nri-discovery-kubernetes
-
-ENTRYPOINT ["/bin/nri-discovery-kubernetes"]
