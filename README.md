@@ -20,22 +20,6 @@ You can run tests with `make test`.
 
 To build the project run: `make build`. This will output the binary release at `bin/nri-discovery-kubernetes`.
 
-### Build the Docker image
-
-In case you wish to push your own version of the image to a Docker registry, you can build it with:
-
-```bash
-`docker build . -t <YOUR_IMAGE_NAME>`
-```
-
-or
-
-```bash
-`docker build . -f Dockerfile.release -t <YOUR_IMAGE_NAME>`
-```
-
-to build the image only, after building the executable. Then push it with `docker push <YOUR_IMAGE_NAME>`.
-
 ### Executing discovery in a development cluster
 
 You can execute the discovery in a local development cluster (for example, Minikube) or in a cloud cluster (like GCP).

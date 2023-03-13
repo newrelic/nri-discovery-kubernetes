@@ -11,17 +11,16 @@ env:
   TAG: "v0.0.0" # needed for goreleaser windows builds
   REPO_FULL_NAME: ${{ github.event.repository.full_name }}
   ORIGINAL_REPO_NAME: "newrelic/nri-discovery-kubernetes"
-  GO_VERSION: '1.19'
 
 jobs:
   static-analysis:
     name: Run all static analysis
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: go.mod
       - uses: newrelic/newrelic-infra-checkers@v1
         with:
           golangci-lint-config: golangci-lint-limited
@@ -37,20 +36,15 @@ jobs:
 
   test-nix:
     name: Run unit tests on *Nix
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.OHAI_DOCKER_HUB_ID }}
-          password: ${{ secrets.OHAI_DOCKER_HUB_PASSWORD }}
+      - uses: actions/checkout@v3
       - name: Unit tests
         run: make ci/test
 
   test-windows:
     name: Run unit tests on Windows
-    runs-on: windows-2019
+    runs-on: windows-latest
     env:
       GOPATH: ${{ github.workspace }}
     defaults:
@@ -58,37 +52,57 @@ jobs:
         working-directory: src/github.com/${{env.ORIGINAL_REPO_NAME}}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: src/github.com/${{env.ORIGINAL_REPO_NAME}}
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
-          go-version: ${{env.GO_VERSION}}
+          go-version-file: "src/github.com/${{env.ORIGINAL_REPO_NAME}}/go.mod"
       - name: Running unit tests
         shell: pwsh
         run: |
           .\build\windows\unit_tests.ps1
 
   e2eTests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
-      max-parallel: 8 # len(k8sVersion) is a good number to have here
+      max-parallel: 3 # len(k8sVersion)/2 is a good number to have here
       matrix:
         # Latest patch version can be found in https://github.com/kubernetes/website/blob/main/content/en/releases/patch-releases.md
         # Some versions might not be available yet in https://storage.googleapis.com/kubernetes-release/release/v1.X.Y/bin/linux/amd64/kubelet
-        k8sVersion: [ "v1.16.15", "v1.17.17", "v1.18.20", "v1.19.14", "v1.20.10", "v1.21.4", "v1.22.0" ]
+        # We are maintaining the same kubernetes versions that (as of today) the Kubernetes team supports:
+        # https://github.com/newrelic/nri-kubernetes/blob/main/.github/workflows/e2e.yaml#L21
+        k8sVersion: [ "v1.26.0","v1.25.3", "v1.24.1", "v1.23.8", "v1.22.11", "v1.21.14" ]
+        cri: [ containerd ]
+        exclude:
+          - k8sVersion: v1.23.8
+            cri: containerd
+          - k8sVersion: v1.22.11
+            cri: containerd
+          - k8sVersion: v1.21.14
+            cri: containerd
+        include:
+          - k8sVersion: v1.23.8
+            cri: docker
+          - k8sVersion: v1.22.11
+            cri: docker
+          - k8sVersion: v1.21.14
+            cri: docker
     env:
       DOCKER_BUILDKIT: '1' # Setting DOCKER_BUILDKIT=1 ensures TARGETOS and TARGETARCH are populated
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: go.mod
       - name: Setup Minikube
-        uses: manusa/actions-setup-minikube@v2.4.1
+        uses: manusa/actions-setup-minikube@v2.7.2
         with:
-          minikube version: v1.20.0
+          minikube version: v1.29.0
           kubernetes version: ${{ matrix.k8sVersion }}
+          github token: ${{ secrets.GITHUB_TOKEN }}
+          driver: docker
+          start args: "--container-runtime=${{ matrix.cri }}"
       - name: Run Integration Tests
         run: make test-integration
