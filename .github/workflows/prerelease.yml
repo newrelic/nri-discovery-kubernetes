@@ -30,16 +30,16 @@ jobs:
       GOPATH: ${{ github.workspace }}
     defaults:
       run:
-        working-directory: src/github.com/${{env.ORIGINAL_REPO_NAME}}
+        working-directory: src/github.com/${{ env.ORIGINAL_REPO_NAME }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          path: src/github.com/${{env.ORIGINAL_REPO_NAME}}
+          path: src/github.com/${{ env.ORIGINAL_REPO_NAME }}
       - name: Install Go
         uses: actions/setup-go@v3
         with:
-          go-version-file: go.mod
+          go-version-file: src\github.com\${{ env.ORIGINAL_REPO_NAME }}\go.mod
       - name: Running unit tests
         shell: pwsh
         run: |
