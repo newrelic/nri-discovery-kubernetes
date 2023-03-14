@@ -34,14 +34,21 @@ endif
 
 .PHONY : release/sign/nix
 release/sign/nix:
+ifneq ($(NO_SIGN), true)
 	@echo "===> $(INTEGRATION) === [release/sign] signing packages"
 	@bash $(CURDIR)/build/nix/sign.sh
-
+else
+	@echo "===> $(INTEGRATION) === [release/sign] signing packages is disabled by environment variable"
+endif
 
 .PHONY : release/publish
 release/publish:
+ifneq ($(NO_PUBLISH), true)
 	@echo "===> $(INTEGRATION) === [release/publish] publishing artifacts"
 	@bash $(CURDIR)/build/upload_artifacts_gh.sh
+else
+	@echo "===> $(INTEGRATION) === [release/publish] publish is disabled by environment variable"
+endif
 
 .PHONY : release
 release: release/build release/sign/nix release/publish release/clean
