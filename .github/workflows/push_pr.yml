@@ -6,11 +6,13 @@ on:
       - main
       - master
   pull_request:
+  workflow_dispatch:
 
 env:
-  TAG: "v0.0.0" # needed for goreleaser windows builds
+  INTEGRATION: "discovery-kubernetes"
+  ORIGINAL_REPO_NAME: 'newrelic/nri-discovery-kubernetes'
   REPO_FULL_NAME: ${{ github.event.repository.full_name }}
-  ORIGINAL_REPO_NAME: "newrelic/nri-discovery-kubernetes"
+  TAG: "v1.2.3" # needed for fake-prereleases
 
 jobs:
   static-analysis:
@@ -106,3 +108,21 @@ jobs:
           start args: "--container-runtime=${{ matrix.cri }}"
       - name: Run Integration Tests
         run: make test-integration
+
+  fake-prerelease:
+    name: Fakes the prerelease, making all the steps of a prerelease without uploading the assets to the Github release
+    runs-on: ubuntu-latest
+    needs: [test-nix, test-windows]
+    env:
+      GPG_MAIL: 'infrastructure-eng@newrelic.com'
+      GPG_PASSPHRASE: ${{ secrets.OHAI_GPG_PASSPHRASE }}
+      GPG_PRIVATE_KEY_BASE64: ${{ secrets.OHAI_GPG_PRIVATE_KEY_BASE64 }} # base64 encoded
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          git tag "$TAG"
+          if [ -z "$GPG_PASSPHRASE" ]; then
+            echo NO_SIGN=true >> $GITHUB_ENV
+          fi
+      - name: Pre release
+        run: make ci/fake-prerelease
