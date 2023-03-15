@@ -6,6 +6,7 @@ on:
       - main
       - master
   pull_request:
+  workflow_dispatch:
 
 env:
   INTEGRATION: "discovery-kubernetes"
@@ -118,6 +119,10 @@ jobs:
       GPG_PRIVATE_KEY_BASE64: ${{ secrets.OHAI_GPG_PRIVATE_KEY_BASE64 }} # base64 encoded
     steps:
       - uses: actions/checkout@v3
-      - run: git tag "$TAG"
+      - run: |
+          git tag "$TAG"
+          if [ -z "$GPG_PASSPHRASE" ]; then
+            echo NO_SIGN=true >> $GITHUB_ENV
+          fi
       - name: Pre release
         run: make ci/fake-prerelease
