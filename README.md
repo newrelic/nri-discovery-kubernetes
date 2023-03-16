@@ -1,4 +1,4 @@
-[![Community Plus header](https://github.com/newrelic/opensource-website/raw/main/src/images/categories/Community_Plus.png)](https://opensource.newrelic.com/oss-category/#community-plus)
+<a href="https://opensource.newrelic.com/oss-category/#community-plus"><picture><source media="(prefers-color-scheme: dark)" srcset="https://github.com/newrelic/opensource-website/raw/main/src/images/categories/dark/Community_Plus.png"><source media="(prefers-color-scheme: light)" srcset="https://github.com/newrelic/opensource-website/raw/main/src/images/categories/Community_Plus.png"><img alt="New Relic Open Source community plus project banner." src="https://github.com/newrelic/opensource-website/raw/main/src/images/categories/Community_Plus.png"></picture></a>
 
 # New Relic Kubernetes Auto-Discovery
 
@@ -40,10 +40,10 @@ If the issue has been confirmed as a bug or is a Feature request, please file a 
 
 **Support channels**
 
-* [New Relic Documentation](https://docs.newrelic.com): Comprehensive guidance for using our platform
-* [New Relic Community](https://discuss.newrelic.com): The best place to engage in troubleshooting questions
-* [New Relic Developer](https://developer.newrelic.com/): Resources for building a custom observability applications
-* [New Relic University](https://learn.newrelic.com/): A range of online training for New Relic users of every level
+- [New Relic Documentation](https://docs.newrelic.com): Comprehensive guidance for using our platform
+- [New Relic Community](https://discuss.newrelic.com): The best place to engage in troubleshooting questions
+- [New Relic Developer](https://developer.newrelic.com/): Resources for building a custom observability applications
+- [New Relic University](https://learn.newrelic.com/): A range of online training for New Relic users of every level
 
 ## Privacy
 
@@ -70,4 +70,5 @@ If you would like to contribute to this project, please review [these guidelines
 To all contributors, we thank you!  Without your contribution, this project would not be what it is today.
 
 ## License
+
 nri-discovery-kubernetes is licensed under the [Apache 2.0](http://apache.org/licenses/LICENSE-2.0.txt) License.
