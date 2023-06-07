@@ -11,6 +11,8 @@ builds:
     binary: nri-discovery-kubernetes
     ldflags:
       - -s -w -X cmd.main.integrationVersion={{.Version}} -X cmd.main.gitCommit={{.Commit}}
+    env:
+      - CGO_ENABLED=0
     goos:
       - linux
       - darwin
@@ -30,6 +32,8 @@ builds:
     binary: nri-discovery-kubernetes
     ldflags:
       - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}}
+    env:
+      - CGO_ENABLED=0
     goos:
       - windows
     goarch:
