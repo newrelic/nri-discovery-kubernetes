@@ -58,8 +58,15 @@ ifneq ("$(GOARCH)", "$(NATIVEARCH)")
 endif
 endif
 
+# rt-update-changelog runs the release-toolkit run.sh script by piping it into bash to update the CHANGELOG.md.
+# It also passes down to the script all the flags added to the make target. To check all the accepted flags,
+# see: https://github.com/newrelic/release-toolkit/blob/main/contrib/ohi-release-notes/run.sh
+#  e.g. `make rt-update-changelog -- -v`
+rt-update-changelog:
+	curl "https://raw.githubusercontent.com/newrelic/release-toolkit/v1/contrib/ohi-release-notes/run.sh" | bash -s -- $(filter-out $@,$(MAKECMDGOALS))
+
 # Include thematic Makefiles
 include $(CURDIR)/build/ci.mk
 include $(CURDIR)/build/release.mk
 
-.PHONY: all fmt build clean tools tools-update deps deps-only compile compile-only test check-version docker-build release release/deps release/test snyk snyk/monitor docker-release
+.PHONY: all fmt build clean tools tools-update deps deps-only compile compile-only test check-version docker-build release release/deps release/test snyk snyk/monitor docker-release rt-update-changelog
