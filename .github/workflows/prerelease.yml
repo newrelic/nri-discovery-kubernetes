@@ -19,7 +19,7 @@ jobs:
     name: Run unit tests on *Nix
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Unit tests
         run: make ci/test
 
@@ -33,11 +33,11 @@ jobs:
         working-directory: src/github.com/${{ env.ORIGINAL_REPO_NAME }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: src/github.com/${{ env.ORIGINAL_REPO_NAME }}
       - name: Install Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version-file: "src/github.com/${{env.ORIGINAL_REPO_NAME}}/go.mod"
       - name: Running unit tests
@@ -54,13 +54,30 @@ jobs:
       GPG_PASSPHRASE: ${{ secrets.OHAI_GPG_PASSPHRASE }}
       GPG_PRIVATE_KEY_BASE64: ${{ secrets.OHAI_GPG_PRIVATE_KEY_BASE64 }} # base64 encoded
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Pre release
         run: make ci/prerelease
+
+  notify-failure:
+    if: ${{ always() && failure() }}
+    needs: [publish-to-s3]
+    runs-on: ubuntu-latest
+    steps:
       - name: Notify failure via Slack
-        if: ${{ failure() }}
         uses: archive/github-actions-slack@master
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.COREINT_SLACK_TOKEN }}
           slack-channel: ${{ secrets.COREINT_SLACK_CHANNEL }}
-          slack-text: "❌ `${{ env.REPO_FULL_NAME }}`: prerelease pipeline failed."
+          slack-text: "❌ `${{ env.ORIGINAL_REPO_NAME }}`: [release pipeline failed](${{ github.server_url }}/${{ env.ORIGINAL_REPO_NAME }}/actions/runs/${{ github.run_id }})."
+
+  update-title-on-failure:
+    if: ${{ always() && failure() }}
+    needs: [publish-to-s3]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reflect failure in release title
+        env:
+          GH_TOKEN: "${{ secrets.COREINT_BOT_TOKEN }}"
+        run: |
+          gh release edit ${{ inputs.tag }} --title "${{ inputs.tag }} (pre-release-failure)"

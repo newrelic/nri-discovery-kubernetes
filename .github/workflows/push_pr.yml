@@ -19,24 +19,27 @@ jobs:
     name: Run all static analysis
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
       - uses: newrelic/newrelic-infra-checkers@v1
         with:
           golangci-lint-config: golangci-lint-limited
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v4
         continue-on-error: ${{ github.event_name != 'pull_request' }}
         with:
           only-new-issues: true
+          skip-cache: true
+      - name: Check if CHANGELOG is valid
+        uses: newrelic/release-toolkit/validate-markdown@v1
 
   test-nix:
     name: Run unit tests on *Nix
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Unit tests
         run: make ci/test
 
@@ -50,11 +53,11 @@ jobs:
         working-directory: src/github.com/${{env.ORIGINAL_REPO_NAME}}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: src/github.com/${{env.ORIGINAL_REPO_NAME}}
       - name: Install Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version-file: "src/github.com/${{env.ORIGINAL_REPO_NAME}}/go.mod"
       - name: Running unit tests
@@ -90,8 +93,8 @@ jobs:
     env:
       DOCKER_BUILDKIT: '1' # Setting DOCKER_BUILDKIT=1 ensures TARGETOS and TARGETARCH are populated
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
       - name: Setup Minikube
@@ -114,7 +117,7 @@ jobs:
       GPG_PASSPHRASE: ${{ secrets.OHAI_GPG_PASSPHRASE }}
       GPG_PRIVATE_KEY_BASE64: ${{ secrets.OHAI_GPG_PRIVATE_KEY_BASE64 }} # base64 encoded
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: |
           git tag "$TAG"
           if [ -z "$GPG_PASSPHRASE" ]; then
