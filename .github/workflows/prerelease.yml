@@ -57,6 +57,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Pre release
         run: make ci/prerelease
+      - if: ${{ github.event.release.prerelease }}
+        uses: actions/checkout@v4
+      - if: ${{ github.event.release.prerelease }}
+        name: Update title for successful pre-release
+        env:
+          GH_TOKEN: "${{ secrets.COREINT_BOT_TOKEN }}"
+        run: |
+          gh release edit ${{ github.event.release.tag_name  }} --title "${{ github.event.release.tag_name  }}"
 
   notify-failure:
     if: ${{ always() && failure() }}
