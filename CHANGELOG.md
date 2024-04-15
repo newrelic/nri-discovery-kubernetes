@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 Unreleased section should follow [Release Toolkit](https://github.com/newrelic/release-toolkit#render-markdown-and-update-markdown)
 
 ## Unreleased
-### security
+
+## v1.8.0 - 2024-04-15
+
+### 🛡️ Security notices
 - Updated dependencies
+
+### ⛓️ Dependencies
+- Upgraded google.golang.org/protobuf from 1.31.0 to 1.33.0
 
 ## 1.6.2
 ### Changed
