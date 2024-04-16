@@ -58,8 +58,6 @@ jobs:
       - name: Pre release
         run: make ci/prerelease
       - if: ${{ github.event.release.prerelease }}
-        uses: actions/checkout@v4
-      - if: ${{ github.event.release.prerelease }}
         name: Update title for successful pre-release
         env:
           GH_TOKEN: "${{ secrets.COREINT_BOT_TOKEN }}"
