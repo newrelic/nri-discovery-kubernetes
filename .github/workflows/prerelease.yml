@@ -68,7 +68,7 @@ jobs:
 
   notify-failure:
     if: ${{ always() && failure() }}
-    needs: [publish-to-s3]
+    needs: [prerelease]
     runs-on: ubuntu-latest
     steps:
       - name: Notify failure via Slack
@@ -80,7 +80,7 @@ jobs:
 
   update-title-on-failure:
     if: ${{ always() && failure() }}
-    needs: [publish-to-s3]
+    needs: [prerelease]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
