@@ -86,4 +86,4 @@ jobs:
         env:
           GH_TOKEN: "${{ secrets.COREINT_BOT_TOKEN }}"
         run: |
-          gh release edit ${{ inputs.tag }} --title "${{ inputs.tag }} (pre-release-failure)"
+          gh release edit ${{ github.event.release.tag_name  }} --title "${{ github.event.release.tag_name  }} (pre-release-failure)"
