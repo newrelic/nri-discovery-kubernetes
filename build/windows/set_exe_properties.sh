@@ -32,8 +32,8 @@ sed \
   -e "s/{Year}/$Year/g" \
   -e "s/{Integration}/nri-$INTEGRATION/g" \
   -e "s/{IntegrationExe}/$INTEGRATION_EXE/g" \
-   ./build/windows/versioninfo.json.template > ./versioninfo.json
+   ./build/windows/versioninfo.json.template > ./cmd/discovery/versioninfo.json
 
 # todo: do we need this export line
 export PATH="$PATH:/go/bin"
-go generate github.com/newrelic/nri-${INTEGRATION}
+go generate github.com/newrelic/nri-${INTEGRATION}/cmd/discovery/
