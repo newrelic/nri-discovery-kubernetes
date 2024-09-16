@@ -8,6 +8,13 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+## v1.9.3 - 2024-09-16
+
+### ⛓️ Dependencies
+- Updated golang version to v1.23.1
+- Updated kubernetes packages to v0.31.1
+- Updated github.com/spf13/viper to v1.19.0 - [Changelog 🔗](https://github.com/spf13/viper/releases/tag/v1.19.0)
+
 ## v1.9.2 - 2024-07-08
 
 ### ⛓️ Dependencies
