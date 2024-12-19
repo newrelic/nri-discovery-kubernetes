@@ -8,7 +8,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
-### enhancement
+## v1.10.0 - 2024-12-19
+
+### 🚀 Enhancements
 - Updated golang.org/x/net to v0.33.0
 
 ## v1.9.4 - 2024-12-16
