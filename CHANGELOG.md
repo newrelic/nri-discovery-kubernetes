@@ -8,6 +8,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+### enhancement
+- Updated golang.org/x/net to v0.33.0
+
 ## v1.9.4 - 2024-12-16
 
 ### ⛓️ Dependencies
@@ -49,7 +52,7 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 ### Changed
 - Bump go version and dependencies
 
-## 1.6.1  
+## 1.6.1
 ### Changed
 - Disable CGO
 
