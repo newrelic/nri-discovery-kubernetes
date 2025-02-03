@@ -8,6 +8,12 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+## v1.10.1 - 2025-02-03
+
+### ⛓️ Dependencies
+- Updated github.com/spf13/pflag to v1.0.6 - [Changelog 🔗](https://github.com/spf13/pflag/releases/tag/v1.0.6)
+- Updated golang patch version to v1.23.5
+
 ## v1.10.0 - 2024-12-19
 
 ### 🚀 Enhancements
