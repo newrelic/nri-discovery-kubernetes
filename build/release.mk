@@ -26,17 +26,17 @@ release/deps: $(GORELEASER_BIN)
 release/build: release/deps release/clean
 ifeq ($(PRERELEASE), true)
 	@echo "===> $(INTEGRATION) === [release/build] PRE-RELEASE compiling all binaries, creating packages, archives"
-	@$(GORELEASER_BIN) release --config $(CURDIR)/build/.goreleaser.yml --rm-dist
+	@$(GORELEASER_BIN) release --config $(CURDIR)/build/.goreleaser.yml --clean
 else
 	@echo "===> $(INTEGRATION) === [release/build] build compiling all binaries"
-	@$(GORELEASER_BIN) build --config $(CURDIR)/build/.goreleaser.yml --snapshot --rm-dist
+	@$(GORELEASER_BIN) build --config $(CURDIR)/build/.goreleaser.yml --snapshot --clean
 endif
 
 .PHONY : release/sign/nix
 release/sign/nix:
 ifneq ($(NO_SIGN), true)
 	@echo "===> $(INTEGRATION) === [release/sign] signing packages"
-	@bash $(CURDIR)/build/nix/sign.sh
+	@bash sign.sh
 else
 	@echo "===> $(INTEGRATION) === [release/sign] signing packages is disabled by environment variable"
 endif

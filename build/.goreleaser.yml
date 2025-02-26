@@ -1,3 +1,6 @@
+---
+version: 2
+project_name: nri-discovery-kubernetes
 before:
   hooks:
     - go mod download
@@ -26,6 +29,26 @@ builds:
         goarch: 386
       - goos: darwin
         goarch: arm
+  
+  - id: nri-discovery-kubernetes-nix-fips
+    main: ./cmd/discovery
+    binary: nri-discovery-kubernetes
+    ldflags:
+      - -s -w -X cmd.main.integrationVersion={{.Version}} -X cmd.main.gitCommit={{.Commit}}
+    env:
+      - CGO_ENABLED=1
+      - GOEXPERIMENT=boringcrypto
+      - >-
+        {{- if eq .Arch "arm64" -}}
+        CC=aarch64-linux-gnu-gcc
+        {{- end }}
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    tags:
+      - fips
 
   - id: nri-discovery-kubernetes-win
     main: ./cmd/discovery
@@ -46,6 +69,17 @@ archives:
     builds:
       - nri-discovery-kubernetes-nix
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+    # Manual replacements to comply with
+    # https://github.com/newrelic/infrastructure-bundle/blob/master/build/scripts/prepare_discoveries.sh
+    replacements:
+      amd64: x86_64
+      linux: Linux
+  
+  - id: nri-discovery-kubernetes-nix-fips
+    builds:
+      - nri-discovery-kubernetes-nix-fips
+    name_template: "{{ .ProjectName }}-fips_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format: tar.gz
     # Manual replacements to comply with
     # https://github.com/newrelic/infrastructure-bundle/blob/master/build/scripts/prepare_discoveries.sh
