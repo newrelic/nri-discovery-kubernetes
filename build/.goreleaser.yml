@@ -75,13 +75,9 @@ archives:
           {{- else }}{{ .Os }}_{{ end }}
           {{- if eq .Arch "amd64" }}x86_64
           {{- else }}{{ .Arch }}{{ end -}}
-    #"{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format: tar.gz
     # Manual replacements to comply with
     # https://github.com/newrelic/infrastructure-bundle/blob/master/build/scripts/prepare_discoveries.sh
-    # replacements:
-    #   amd64: x86_64
-    #   linux: Linux
   
   - id: nri-discovery-kubernetes-nix-fips
     builds:
@@ -93,13 +89,9 @@ archives:
           {{- else }}{{ .Os }}_{{ end }}
           {{- if eq .Arch "amd64" }}x86_64
           {{- else }}{{ .Arch }}{{ end -}}
-    #"{{ .ProjectName }}-fips_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format: tar.gz
     # Manual replacements to comply with
     # https://github.com/newrelic/infrastructure-bundle/blob/master/build/scripts/prepare_discoveries.sh
-    # replacements:
-    #   amd64: x86_64
-    #   linux: Linux
 
   - id: nri-discovery-kubernetes-win
     builds:
