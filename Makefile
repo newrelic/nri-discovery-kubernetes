@@ -6,8 +6,10 @@ PROJECT      := nri-discovery-kubernetes
 BINARY_NAME   = $(PROJECT)
 IMAGE_NAME   ?= newrelic/nri-discovery-kubernetes
 GOPATH := $(shell go env GOPATH)
-GORELEASER_VERSION := v0.168.0
+GORELEASER_VERSION := v2.4.4
 GORELEASER_BIN ?= bin/goreleaser
+GO_VERSION 		?= $(shell grep '^go ' go.mod | awk '{print $$2}')
+BUILDER_IMAGE 	?= "ghcr.io/newrelic/coreint-automation:latest-go$(GO_VERSION)-ubuntu16.04"
 
 all: build
 
