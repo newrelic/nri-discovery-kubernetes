@@ -8,6 +8,11 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+## v1.12.1 - 2025-07-10
+
+### ⛓️ Dependencies
+- Updated github.com/go-viper/mapstructure/v2
+
 ## v1.12.0 - 2025-07-10
 
 ### ⛓️ Dependencies
