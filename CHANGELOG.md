@@ -8,6 +8,11 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+## v1.13.2 - 2025-09-01
+
+### ⛓️ Dependencies
+- Updated github.com/spf13/pflag to v1.0.9 - [Changelog 🔗](https://github.com/spf13/pflag/releases/tag/v1.0.9)
+
 ## v1.13.1 - 2025-08-28
 
 ### ⛓️ Dependencies
