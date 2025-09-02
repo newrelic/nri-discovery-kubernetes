@@ -5,7 +5,7 @@ go 1.24.6
 require (
 	github.com/sethgrid/pester v1.2.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/spf13/pflag v1.0.9
+	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.11.1
 	k8s.io/api v0.31.1
