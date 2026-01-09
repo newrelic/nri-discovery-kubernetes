@@ -134,3 +134,124 @@ spec:
             privileged: true
       restartPolicy: Never
 ---
+# Services for echo-server deployment (default namespace)
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-server
+  namespace: default
+  labels:
+    app: echo-server
+    env: development
+  annotations:
+    description: "Echo server service for testing"
+    team: platform
+spec:
+  type: ClusterIP
+  selector:
+    app: echo-server
+    env: development
+    ns: default
+  ports:
+  - name: echo
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+---
+# NodePort service for external access
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-server-nodeport
+  namespace: default
+  labels:
+    app: echo-server
+    access: external
+  annotations:
+    description: "Echo server exposed via NodePort"
+spec:
+  type: NodePort
+  selector:
+    app: echo-server
+    env: development
+    ns: default
+  ports:
+  - name: echo
+    port: 8080
+    targetPort: 8080
+    nodePort: 30080
+    protocol: TCP
+---
+# Services for echo-server deployment (test-ns namespace)
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-server
+  namespace: test-ns
+  labels:
+    app: echo-server
+    env: development
+  annotations:
+    description: "Echo server service in test namespace"
+    team: platform
+spec:
+  type: ClusterIP
+  selector:
+    app: echo-server
+    env: development
+    ns: test
+  ports:
+  - name: echo
+    port: 8081
+    targetPort: 8081
+    protocol: TCP
+  - name: http
+    port: 81
+    targetPort: 81
+    protocol: TCP
+---
+# LoadBalancer service (demo)
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-server-lb
+  namespace: test-ns
+  labels:
+    app: echo-server
+    access: external
+spec:
+  type: LoadBalancer
+  selector:
+    app: echo-server
+    env: development
+    ns: test
+  ports:
+  - name: echo
+    port: 8081
+    targetPort: 8081
+    protocol: TCP
+---
+# Headless service (for StatefulSets, DNS records)
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-server-headless
+  namespace: test-ns
+  labels:
+    app: echo-server
+    service-type: headless
+spec:
+  clusterIP: None
+  selector:
+    app: echo-server
+    env: development
+    ns: test
+  ports:
+  - name: echo
+    port: 8081
+    targetPort: 8081
+    protocol: TCP
