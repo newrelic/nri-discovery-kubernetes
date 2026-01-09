@@ -17,7 +17,15 @@ const (
 	ip               Property = "ip"
 	ports            Property = "ports"
 
+	// Service-specific properties
+	serviceName      Property = "serviceName"
+	serviceType      Property = "serviceType"
+	clusterIP        Property = "clusterIP"
+	externalIPs      Property = "externalIPs"
+	serviceSelector  Property = "selector"
+
 	entityRewriteActionReplace Property = "replace"
 	entityRewriteMatch         Property = "${ip}"
 	entityReplaceField         Property = "k8s:${clusterName}:${namespace}:pod:${podName}:${name}"
+	serviceEntityReplaceField  Property = "k8s:${clusterName}:${namespace}:service:${serviceName}"
 )

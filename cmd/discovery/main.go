@@ -57,7 +57,14 @@ func main() {
 	}
 
 	kube := kubelet.New(httpClient, config)
-	discoverer := discovery.NewDiscoverer(config.Namespaces, kube)
+	discoverer := discovery.NewDiscoverer(config.Namespaces, kube, config.DiscoverServices)
+
+	// If discovering services, initialize and set the service discoverer
+	if config.DiscoverServices {
+		serviceDiscoverer := kubelet.NewServiceDiscoverer(k8s, config)
+		discoverer.SetServiceDiscoverer(serviceDiscoverer)
+	}
+
 	output, err := discoverer.Run()
 	if err != nil {
 		log.Printf("failed to connect to Kubernetes: %s", err)
