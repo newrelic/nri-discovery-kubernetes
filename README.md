@@ -2,9 +2,16 @@
 
 # New Relic Kubernetes Auto-Discovery
 
-Automatically discovers containers running inside Kubernetes and returns a list of containers and their metadata in all namespaces by default. It can be configured to discover on specific namespaces only.
+Automatically discovers containers (pods) or services running inside Kubernetes and returns a list with their metadata in all namespaces by default. It can be configured to discover on specific namespaces only.
 
-This application is meant to be run alongside the Infrastructure agent to automatically configure integrations based on the discovered containers.
+**Discovery Modes:**
+
+- **Pod Discovery** (default): Discovers containers running inside Kubernetes pods
+- **Service Discovery**: Discovers Kubernetes services (controlled via `--discover-services` flag)
+  - Supports all service types: ClusterIP, NodePort, LoadBalancer, Headless
+  - Extracts full service metadata: ports, labels, annotations, selectors
+
+This application is meant to be run alongside the Infrastructure agent to automatically configure integrations based on the discovered containers or services.
 
 ## Building
 
