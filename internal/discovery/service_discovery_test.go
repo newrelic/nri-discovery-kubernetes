@@ -6,9 +6,6 @@ import (
 	"github.com/newrelic/nri-discovery-kubernetes/internal/kubernetes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -497,91 +494,5 @@ func createServiceWithPorts() kubernetes.ServiceInfo {
 			},
 		},
 		Cluster: testServiceClusterName,
-	}
-}
-
-// Create fake Kubernetes services for testing
-
-func createFakeServices() []corev1.Service {
-	return []corev1.Service{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "nginx-service",
-				Namespace: "default",
-				Labels: map[string]string{
-					"app": "nginx",
-				},
-			},
-			Spec: corev1.ServiceSpec{
-				Type:      corev1.ServiceTypeClusterIP,
-				ClusterIP: "10.96.0.1",
-				Ports: []corev1.ServicePort{
-					{
-						Name:       "http",
-						Port:       80,
-						TargetPort: intstr.FromInt(8080),
-						Protocol:   corev1.ProtocolTCP,
-					},
-				},
-				Selector: map[string]string{
-					"app": "nginx",
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "api-service",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"prometheus.io/scrape": "true",
-				},
-			},
-			Spec: corev1.ServiceSpec{
-				Type:      corev1.ServiceTypeNodePort,
-				ClusterIP: "10.96.0.2",
-				Ports: []corev1.ServicePort{
-					{
-						Name:       "http",
-						Port:       8080,
-						TargetPort: intstr.FromInt(8080),
-						Protocol:   corev1.ProtocolTCP,
-						NodePort:   30080,
-					},
-				},
-				Selector: map[string]string{
-					"app": "api",
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kube-dns",
-				Namespace: "kube-system",
-				Labels: map[string]string{
-					"k8s-app": "kube-dns",
-				},
-			},
-			Spec: corev1.ServiceSpec{
-				Type:      corev1.ServiceTypeClusterIP,
-				ClusterIP: "10.96.0.10",
-				Ports: []corev1.ServicePort{
-					{
-						Name:       "dns",
-						Port:       53,
-						TargetPort: intstr.FromInt(53),
-						Protocol:   corev1.ProtocolUDP,
-					},
-					{
-						Name:       "dns-tcp",
-						Port:       53,
-						TargetPort: intstr.FromInt(53),
-						Protocol:   corev1.ProtocolTCP,
-					},
-				},
-				Selector: map[string]string{
-					"k8s-app": "kube-dns",
-				},
-			},
-		},
 	}
 }
