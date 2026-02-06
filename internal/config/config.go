@@ -15,16 +15,17 @@ const (
 	DefaultTimeout = 5000        // Default timeout of 5 seconds in miliseconds
 	DefaultRetries = 5           // Default retries to 5
 
-	FlagHost           = "host"
-	FlagNamespaces     = "namespaces"
-	FlagPort           = "port"
-	FlagInsecure       = "insecure"
-	FlagTimeout        = "timeout"
-	FlagRetries        = "retries"
-	FlagTLS            = "tls"
-	FlagKubeConfigFile = "kubeconfig"
-	FlagClusterName    = "cluster_name"
-	FlagNodeName       = "node_name"
+	FlagHost              = "host"
+	FlagNamespaces        = "namespaces"
+	FlagPort              = "port"
+	FlagInsecure          = "insecure"
+	FlagTimeout           = "timeout"
+	FlagRetries           = "retries"
+	FlagTLS               = "tls"
+	FlagKubeConfigFile    = "kubeconfig"
+	FlagClusterName       = "cluster_name"
+	FlagNodeName          = "node_name"
+	FlagDiscoverServices  = "discover-services"
 
 	envPrefix            = "NRIA"
 	nodeNameEnvVar       = "NRI_KUBERNETES_NODE_NAME"
@@ -48,21 +49,23 @@ For backwards compatibility this flag takes precedence over 'tls')`)
 	_ = flag.String(FlagNodeName, "", "(optional) Set node name to try to find its IP")
 
 	_ = flag.String(FlagKubeConfigFile, "", "(optional) Kubeconfig to use to connecto to kubelet")
+	_ = flag.Bool(FlagDiscoverServices, false, "(optional, default false) Discover Kubernetes services instead of just pods")
 
 	ErrClusterNameNotSet = errors.New("cluster name is not set")
 )
 
 // Config defined the currently accepted configuration parameters of the Discoverer.
 type Config struct {
-	Namespaces     []string
-	Port           int
-	Host           string
-	TLS            bool
-	Timeout        int
-	Retries        int
-	KubeConfigFile string
-	ClusterName    string
-	NodeName       string
+	Namespaces       []string
+	Port             int
+	Host             string
+	TLS              bool
+	Timeout          int
+	Retries          int
+	KubeConfigFile   string
+	ClusterName      string
+	NodeName         string
+	DiscoverServices bool
 }
 
 func splitStrings(str string) []string {
@@ -99,16 +102,18 @@ func NewConfig(version string) (*Config, error) {
 
 	_ = v.BindPFlag(FlagClusterName, flag.Lookup(FlagClusterName))
 	_ = v.BindPFlag(FlagNodeName, flag.Lookup(FlagNodeName))
+	_ = v.BindPFlag(FlagDiscoverServices, flag.Lookup(FlagDiscoverServices))
 
 	v.SetEnvPrefix(envPrefix)
 	v.AutomaticEnv()
 
 	config := Config{
-		Namespaces: splitStrings(v.GetString(FlagNamespaces)),
-		Port:       v.GetInt(FlagPort),
-		Host:       v.GetString(FlagHost),
-		Timeout:    v.GetInt(FlagTimeout),
-		Retries:    v.GetInt(FlagRetries),
+		Namespaces:       splitStrings(v.GetString(FlagNamespaces)),
+		Port:             v.GetInt(FlagPort),
+		Host:             v.GetString(FlagHost),
+		Timeout:          v.GetInt(FlagTimeout),
+		Retries:          v.GetInt(FlagRetries),
+		DiscoverServices: v.GetBool(FlagDiscoverServices),
 	}
 
 	// To leave the variable empty as nil
