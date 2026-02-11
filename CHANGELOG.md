@@ -8,7 +8,7 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
-## v1.14.0 - 2026-01-15
+## v1.14.0
 
 ### ✨ Features
 - **Kubernetes Service Discovery**: Added comprehensive support for discovering Kubernetes services alongside the existing pod/container discovery
@@ -30,6 +30,11 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 - New service metadata types: `ServiceInfo`, `ServicePortInfo`
 - Mutually exclusive discovery modes: pods XOR services (simplifies integration configs)
 - Kubernetes API integration with context-based request handling
+
+## v1.13.9 - 2026-02-07
+
+### ⛓️ Dependencies
+- Updated golang patch version to v1.25.7
 
 ## v1.13.8 - 2026-01-19
 
