@@ -8,6 +8,29 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+## v1.14.0
+
+### ✨ Features
+- **Kubernetes Service Discovery**: Added comprehensive support for discovering Kubernetes services alongside the existing pod/container discovery
+  - Controlled via new `--discover-services` flag (default: pods only)
+  - Supports all Kubernetes service types: ClusterIP, NodePort, LoadBalancer, and Headless
+  - Full service metadata extraction: ports, labels, annotations, service selectors
+  - Service entity format: `k8s:${clusterName}:${namespace}:service:${serviceName}`
+  - Namespace filtering support for services discovery
+  - Backward compatible: existing pod discovery unchanged
+
+### 🧪 Testing
+- 30+ unit tests for service transformation and filtering
+- Table-driven tests for all service types and edge cases
+- Integration tests with discoverer layer
+- Test service manifest with 5 service examples (ClusterIP, NodePort, LoadBalancer, Headless)
+
+### 📋 Implementation Details
+- New `ServiceDiscoverer` interface for Kubernetes API-based discovery
+- New service metadata types: `ServiceInfo`, `ServicePortInfo`
+- Mutually exclusive discovery modes: pods XOR services (simplifies integration configs)
+- Kubernetes API integration with context-based request handling
+
 ## v1.13.9 - 2026-02-07
 
 ### ⛓️ Dependencies
