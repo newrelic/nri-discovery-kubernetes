@@ -8,6 +8,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+### security
+- update golang.org/x/net to v0.51.0
+
 ## v1.14.0
 
 ### ✨ Features
