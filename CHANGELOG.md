@@ -10,6 +10,8 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ### security
 - update golang.org/x/net to v0.51.0
+- update manusa/actions-setup-minikube action to v2.16.1
+- update go to v1.25.8
 
 ## v1.14.0
 
