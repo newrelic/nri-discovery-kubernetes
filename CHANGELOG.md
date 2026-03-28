@@ -8,6 +8,14 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+### enhancement
+- add Kubernetes Service discovery support
+
+### security
+- update golang.org/x/net to v0.51.0
+- update manusa/actions-setup-minikube action to v2.16.1
+- update go to v1.25.8
+
 ## v1.14.0
 
 ### ✨ Features
