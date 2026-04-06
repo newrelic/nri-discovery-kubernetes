@@ -1,5 +1,5 @@
 
-FROM golang:1.25.8-bookworm AS build
+FROM golang:1.26.1-bookworm AS build
 RUN apk add --no-cache --update git make
 
 WORKDIR /go/src/github.com/newrelic/nri-discovery-kubernetes
