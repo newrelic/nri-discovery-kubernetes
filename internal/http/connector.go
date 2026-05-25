@@ -2,7 +2,6 @@ package http
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -67,7 +66,7 @@ func (dp *defaultConnector) Connect() (*connParams, error) {
 	hostURL := net.JoinHostPort(dp.config.Host, fmt.Sprint(kubeletPort))
 
 	dp.logger.Infof("Trying to connect to kubelet locally with scheme=%q hostURL=%q", kubeletScheme, hostURL)
-	trip, err := tripperWithBearerTokenAndRefresh(dp.inClusterConfig.BearerTokenFile)
+	trip, err := tripperWithBearerTokenAndRefresh(dp.inClusterConfig.BearerTokenFile, dp.inClusterConfig)
 	if err != nil {
 		return nil, fmt.Errorf("creating tripper connecting to kubelet through nodeIP: %w", err)
 	}
@@ -236,13 +235,21 @@ func checkConnection(conn connParams) error {
 	return nil
 }
 
-func tripperWithBearerTokenAndRefresh(tokenFile string) (http.RoundTripper, error) {
+func tripperWithBearerTokenAndRefresh(tokenFile string, inClusterConfig *rest.Config) (http.RoundTripper, error) {
 	// Here we're using the default http.Transport configuration, but with a modified TLS config.
 	// The DefaultTransport is casted to an http.RoundTripper interface, so we need to convert it back.
 	t := http.DefaultTransport.(*http.Transport).Clone()
-	t.TLSClientConfig.InsecureSkipVerify = true
-	// Kubelet cert is usually not issued to `localhost` so it fails when you want to connect using that hostname.
-	t.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint: gosec
+
+	// Build TLS config from in-cluster config which includes the cluster CA certificate.
+	// This verifies the kubelet's certificate chain while allowing hostname mismatch,
+	// since kubelet certs are typically not issued to `localhost`.
+	transportConfig, err := inClusterConfig.TransportConfig()
+	if err == nil {
+		tlsConfig, tlsErr := transport.TLSConfigFor(transportConfig)
+		if tlsErr == nil && tlsConfig != nil {
+			t.TLSClientConfig = tlsConfig
+		}
+	}
 
 	// Use the default kubernetes Bearer token authentication RoundTripper
 	tripperWithBearerRefreshing, err := transport.NewBearerAuthWithRefreshRoundTripper("", tokenFile, t)
