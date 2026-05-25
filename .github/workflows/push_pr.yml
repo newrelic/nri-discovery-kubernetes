@@ -8,6 +8,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+
+permissions:
+  contents: read
+
 env:
   INTEGRATION: "discovery-kubernetes"
   ORIGINAL_REPO_NAME: 'newrelic/nri-discovery-kubernetes'
