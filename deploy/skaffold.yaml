@@ -23,7 +23,7 @@ profiles:
       tagPolicy:
         sha256: {}
       artifacts:
-        - image: gcr.io/k8s-o11y-team/newrelic/nri-discovery-kubernetes
+        - image: us-west2-docker.pkg.dev/k8s-o11y-team/newrelic/nri-discovery-kubernetes
           context: .
           docker:
             dockerfile: Dockerfile
