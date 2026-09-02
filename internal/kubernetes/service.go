@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
 	corev1 "k8s.io/api/core/v1"
@@ -21,16 +22,18 @@ type ServicePortInfo struct {
 
 // ServiceInfo represents discovery-specific format for found Services via Kubernetes API.
 type ServiceInfo struct {
-	Name            string
-	Namespace       string
-	Type            string
-	ClusterIP       string
-	ExternalIPs    []string
-	Ports           []ServicePortInfo
-	Selector        LabelsMap
-	Labels          LabelsMap
-	Annotations     AnnotationsMap
-	Cluster         string
+	Name                string
+	Namespace           string
+	Type                string
+	ClusterIP           string
+	ExternalIPs         []string
+	Ports               []ServicePortInfo
+	Selector            LabelsMap
+	Labels              LabelsMap
+	Annotations         AnnotationsMap
+	Cluster             string
+	Instrumented        bool
+	InstrumentationType string
 }
 
 // ServiceDiscoverer defines what functionality service discovery client provides.
@@ -95,22 +98,43 @@ func transformServices(clusterName string, services []corev1.Service) []ServiceI
 			}
 		}
 
+		instrumented, instrType := detectServiceInstrumentation(svc)
 		serviceInfo := ServiceInfo{
-			Name:          svc.Name,
-			Namespace:     svc.Namespace,
-			Type:          string(svc.Spec.Type),
-			ClusterIP:     svc.Spec.ClusterIP,
-			ExternalIPs:   svc.Spec.ExternalIPs,
-			Ports:         ports,
-			Selector:      svc.Spec.Selector,
-			Labels:        svc.Labels,
-			Annotations:   svc.Annotations,
-			Cluster:       clusterName,
+			Name:                svc.Name,
+			Namespace:           svc.Namespace,
+			Type:                string(svc.Spec.Type),
+			ClusterIP:           svc.Spec.ClusterIP,
+			ExternalIPs:         svc.Spec.ExternalIPs,
+			Ports:               ports,
+			Selector:            svc.Spec.Selector,
+			Labels:              svc.Labels,
+			Annotations:         svc.Annotations,
+			Cluster:             clusterName,
+			Instrumented:        instrumented,
+			InstrumentationType: instrType,
 		}
 		result = append(result, serviceInfo)
 	}
 
+
 	return result
+}
+
+// detectServiceInstrumentation checks service annotations to determine whether it is
+// instrumented with New Relic or OpenTelemetry.
+func detectServiceInstrumentation(svc corev1.Service) (bool, string) {
+	for k, v := range svc.Annotations {
+		if strings.HasPrefix(k, "instrumentation.opentelemetry.io/") {
+			return true, InstrumentationOTel
+		}
+		if k == "newrelic.com/integrations-config" {
+			return true, InstrumentationNROnHost
+		}
+		if k == "prometheus.io/scrape" && v == "true" {
+			return true, InstrumentationPrometheus
+		}
+	}
+	return false, InstrumentationNone
 }
 
 // NewServiceDiscoverer creates a new service discoverer using the provided clientset.

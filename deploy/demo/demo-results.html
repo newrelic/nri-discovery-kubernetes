@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>K8s Discovery — nri-discovery-kubernetes</title>
+  <style>
+    :root {
+      --bg:        #0a0e1a;
+      --surface:   #111827;
+      --surface2:  #1a2233;
+      --border:    #1f2d42;
+      --text:      #e2e8f0;
+      --muted:     #6b7a99;
+      --green:     #00c853;
+      --green-dim: #00c85322;
+      --red:       #ff4560;
+      --red-dim:   #ff456022;
+      --blue:      #00b4d8;
+      --purple:    #9d4edd;
+      --yellow:    #ffd60a;
+      --orange:    #ff9800;
+      --nr-green:  #00ac69;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+         background:var(--bg);color:var(--text);min-height:100vh;padding:28px 20px 64px}
+
+    /* ── Header ── */
+    header{max-width:1200px;margin:0 auto 32px;display:flex;align-items:flex-start;
+           justify-content:space-between;flex-wrap:wrap;gap:16px}
+    .logo{display:flex;align-items:center;gap:12px}
+    .logo-text h1{font-size:21px;font-weight:700;letter-spacing:-.3px}
+    .logo-text p{font-size:12px;color:var(--muted);margin-top:2px}
+    .cluster-badge{display:flex;align-items:center;gap:8px;background:var(--surface);
+                   border:1px solid var(--border);border-radius:8px;padding:9px 14px;font-size:12px}
+    .cluster-dot{width:7px;height:7px;border-radius:50%;background:var(--green);
+                 box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+    /* ── Refresh bar ── */
+    .refresh-bar{max-width:1200px;margin:0 auto 24px;
+                 display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+    .refresh-status{font-size:12px;color:var(--muted)}
+    .refresh-status .ts{color:var(--text)}
+    .refresh-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);
+                 border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;
+                 display:flex;align-items:center;gap:7px;transition:border-color .2s}
+    .refresh-btn:hover{border-color:var(--blue)}
+    .spinner{width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--blue);
+             border-radius:50%;display:none;animation:spin .7s linear infinite}
+    .loading .spinner{display:block}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .progress-track{max-width:1200px;margin:-16px auto 24px;height:2px;
+                    background:var(--border);border-radius:1px;overflow:hidden}
+    .progress-fill{height:100%;background:var(--blue);width:0%;border-radius:1px;transition:width linear}
+
+    /* ── Summary ── */
+    .summary{max-width:1200px;margin:0 auto 28px;
+             display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px}
+    .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:6px}
+    .stat-value{font-size:32px;font-weight:700;line-height:1}
+    .stat-value.total{color:var(--blue)}
+    .stat-value.ok{color:var(--green)}
+    .stat-value.missing{color:var(--red)}
+    .stat-value.kinds{color:var(--yellow)}
+    .stat-sub{font-size:11px;color:var(--muted);margin-top:5px}
+
+    /* ── Tabs ── */
+    .tabs-wrap{max-width:1200px;margin:0 auto 20px;
+               display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+    .tabs{display:flex;gap:4px;flex-wrap:wrap}
+    .tab{background:var(--surface);border:1px solid var(--border);color:var(--muted);
+         border-radius:7px;padding:7px 14px;font-size:12px;cursor:pointer;
+         transition:all .15s;white-space:nowrap}
+    .tab:hover{color:var(--text);border-color:#2d3f5a}
+    .tab.active{background:var(--surface2);border-color:var(--blue);color:var(--blue)}
+    .ns-filter{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+    .ns-filter select{background:var(--surface);border:1px solid var(--border);color:var(--text);
+                       border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer}
+
+    /* ── Grid ── */
+    .grid{max-width:1200px;margin:0 auto;
+          display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:11px;
+          overflow:hidden;transition:border-color .2s,transform .15s;animation:fadeIn .25s ease}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+    .card:hover{transform:translateY(-2px);border-color:#2d3f5a}
+    .card.instrumented  {border-top:3px solid var(--green)}
+    .card.uninstrumented{border-top:3px solid var(--red)}
+    .card.neutral       {border-top:3px solid var(--border)}
+
+    .card-header{padding:15px 17px 11px;display:flex;align-items:flex-start;
+                 justify-content:space-between;gap:10px}
+    .service-icon{width:36px;height:36px;border-radius:8px;display:flex;
+                  align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+    .service-info{flex:1;min-width:0}
+    .service-name{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .service-meta{font-size:11px;color:var(--muted);margin-top:2px}
+
+    .status-pill{display:flex;align-items:center;gap:5px;border-radius:20px;padding:4px 10px;
+                 font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0}
+    .status-pill.ok     {background:var(--green-dim);color:var(--green)}
+    .status-pill.missing{background:var(--red-dim);color:var(--red)}
+    .status-pill.neutral{background:#ffffff08;color:var(--muted)}
+    .status-pill .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+    .card-body{padding:0 17px 15px}
+
+    .instr-badge{display:inline-flex;align-items:center;gap:5px;border-radius:5px;
+                 padding:4px 9px;font-size:11px;font-weight:500;margin-bottom:12px}
+    .instr-badge.nr  {background:#00ac6920;color:var(--nr-green);border:1px solid #00ac6940}
+    .instr-badge.otel{background:#9d4edd20;color:var(--purple);border:1px solid #9d4edd40}
+    .instr-badge.prom{background:#ffd60a20;color:var(--yellow);border:1px solid #ffd60a40}
+    .instr-badge.none{background:#ffffff08;color:var(--muted);border:1px solid var(--border)}
+
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px 14px}
+    .detail-label{font-size:10px;text-transform:uppercase;letter-spacing:.6px;
+                  color:var(--muted);margin-bottom:2px}
+    .detail-value{font-size:11px;font-family:'SF Mono','Fira Code',monospace;word-break:break-all}
+
+    .ports{margin-top:10px;display:flex;flex-wrap:wrap;gap:5px}
+    .port-tag{background:var(--surface2);border:1px solid var(--border);border-radius:4px;
+              padding:2px 7px;font-size:10px;font-family:monospace;color:var(--blue)}
+
+    .kind-tag{display:inline-block;border-radius:4px;padding:2px 7px;font-size:10px;
+              font-weight:600;letter-spacing:.4px;text-transform:uppercase;margin-bottom:10px}
+    .kind-tag.Service    {background:#00b4d820;color:var(--blue)}
+    .kind-tag.Deployment {background:#00c85320;color:var(--green)}
+    .kind-tag.StatefulSet{background:#9d4edd20;color:var(--purple)}
+    .kind-tag.DaemonSet  {background:#ffd60a20;color:var(--yellow)}
+    .kind-tag.PVC        {background:#ff980020;color:var(--orange)}
+    .kind-tag.CRD        {background:#ffffff12;color:var(--muted)}
+
+    .replicas-bar{margin-top:10px}
+    .replicas-label{font-size:10px;color:var(--muted);margin-bottom:4px;
+                    display:flex;justify-content:space-between}
+    .replicas-track{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+    .replicas-fill{height:100%;border-radius:3px;transition:width .4s}
+    .replicas-fill.full  {background:var(--green)}
+    .replicas-fill.partial{background:var(--yellow)}
+    .replicas-fill.zero  {background:var(--red)}
+
+    .pvc-status{display:inline-flex;align-items:center;gap:5px;border-radius:20px;
+                padding:3px 9px;font-size:11px;font-weight:600;margin-bottom:10px}
+    .pvc-status.Bound  {background:var(--green-dim);color:var(--green)}
+    .pvc-status.Pending{background:#ffd60a20;color:var(--yellow)}
+    .pvc-status.Lost   {background:var(--red-dim);color:var(--red)}
+
+    .signal-box{margin-top:10px;background:var(--surface2);border:1px solid var(--border);
+                border-radius:7px;padding:9px 11px;font-size:10px;color:var(--muted);
+                font-family:monospace;line-height:1.7;word-break:break-all}
+    .signal-box .key{color:#7dd3fc}
+    .signal-box .val{color:#86efac}
+
+    .empty-state{max-width:1200px;margin:60px auto;text-align:center;color:var(--muted)}
+    .empty-state p{font-size:14px;margin-top:10px}
+    footer{max-width:1200px;margin:48px auto 0;text-align:center;font-size:11px;color:var(--muted)}
+    footer a{color:var(--blue);text-decoration:none}
+
+    @media(max-width:680px){
+      .summary{grid-template-columns:1fr 1fr}
+      .grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <svg width="38" height="38" viewBox="0 0 40 40" fill="none">
+      <rect width="40" height="40" rx="10" fill="#00ac69"/>
+      <path d="M20 8L32 14v12L20 32 8 26V14z" stroke="white" stroke-width="2" fill="none"/>
+      <circle cx="20" cy="20" r="4" fill="white"/>
+    </svg>
+    <div class="logo-text">
+      <h1>K8s Resource Discovery</h1>
+      <p>nri-discovery-kubernetes · Live instrumentation &amp; resource report</p>
+    </div>
+  </div>
+  <div class="cluster-badge">
+    <div class="cluster-dot"></div>
+    <span>Cluster&nbsp;</span><strong id="cluster-name">—</strong>
+  </div>
+</header>
+
+<!-- Refresh bar -->
+<div class="refresh-bar">
+  <div class="refresh-status">Last updated: <span class="ts" id="last-updated">—</span> · auto-refresh 30 s</div>
+  <button class="refresh-btn" id="refresh-btn" onclick="fetchNow()">
+    <div class="spinner" id="spinner"></div><span>Refresh now</span>
+  </button>
+</div>
+<div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+
+<!-- Summary -->
+<div class="summary">
+  <div class="stat">
+    <div class="stat-label">Total Discovered</div>
+    <div class="stat-value total" id="stat-total">—</div>
+    <div class="stat-sub" id="stat-kinds-sub"></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Instrumented</div>
+    <div class="stat-value ok" id="stat-ok">—</div>
+    <div class="stat-sub" id="stat-ok-sub"></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Not Instrumented</div>
+    <div class="stat-value missing" id="stat-missing">—</div>
+    <div class="stat-sub" id="stat-missing-sub"></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Resource Kinds</div>
+    <div class="stat-value kinds" id="stat-kinds">—</div>
+    <div class="stat-sub" id="stat-kinds2-sub"></div>
+  </div>
+</div>
+
+<!-- Tabs + namespace filter -->
+<div class="tabs-wrap">
+  <div class="tabs" id="tabs"></div>
+  <div class="ns-filter">
+    Namespace:
+    <select id="ns-select" onchange="applyFilters()">
+      <option value="">All</option>
+    </select>
+  </div>
+</div>
+
+<!-- Grid -->
+<div class="grid" id="grid"></div>
+<div class="empty-state" id="empty-state" style="display:none">
+  <svg width="44" height="44" fill="none" viewBox="0 0 44 44">
+    <circle cx="22" cy="22" r="20" stroke="#1f2d42" stroke-width="2"/>
+    <path d="M14 22h16M22 14v16" stroke="#6b7a99" stroke-width="2"/>
+  </svg>
+  <p id="empty-msg">Waiting for discovery data…</p>
+</div>
+
+<footer>
+  Live data from
+  <a href="https://github.com/newrelic/nri-discovery-kubernetes">nri-discovery-kubernetes</a>
+  · polling <code>/api/services</code> every 30 s
+</footer>
+
+<script>
+// ── config ────────────────────────────────────────────────────────────────────
+
+const KIND_META = {
+  Service:                  { icon: '⚙️',  bg: '#00b4d815', label: 'Service',     hasInstr: true  },
+  Deployment:               { icon: '📦',  bg: '#00c85315', label: 'Deployment',  hasInstr: true  },
+  StatefulSet:              { icon: '🗃️',  bg: '#9d4edd15', label: 'StatefulSet', hasInstr: true  },
+  DaemonSet:                { icon: '👾',  bg: '#ffd60a15', label: 'DaemonSet',   hasInstr: true  },
+  PersistentVolumeClaim:    { icon: '💾',  bg: '#ff980015', label: 'PVC',         hasInstr: false },
+  CustomResourceDefinition: { icon: '🧩',  bg: '#ffffff0a', label: 'CRD',         hasInstr: false },
+  Pod:                      { icon: '🔵',  bg: '#00b4d815', label: 'Pod',         hasInstr: true  },
+};
+
+const INSTR_BADGES = {
+  'newrelic-integration': { cls:'nr',   text:'newrelic-integration' },
+  'newrelic-apm':         { cls:'nr',   text:'newrelic-apm' },
+  'opentelemetry':        { cls:'otel', text:'opentelemetry' },
+  'prometheus':           { cls:'prom', text:'prometheus' },
+};
+
+// ── state ─────────────────────────────────────────────────────────────────────
+
+let allItems = [];
+let activeKind = 'all';
+let activeNs   = '';
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+function resourceKind(item){
+  return item.variables?.kind || 'Service';
+}
+
+function resourceName(item){
+  const v = item.variables || {};
+  return v.workloadName || v.serviceName || v.pvcName || v.crdName || v.name || '(unknown)';
+}
+
+function uniqueNamespaces(items){
+  const ns = new Set(items.map(i => i.variables?.namespace).filter(Boolean));
+  return [...ns].sort();
+}
+
+// ── rendering ─────────────────────────────────────────────────────────────────
+
+function instrBadge(item){
+  const meta = KIND_META[resourceKind(item)];
+  if (!meta?.hasInstr) return '';
+  const bt = INSTR_BADGES[item.instrumentationType];
+  if (bt) return `<div class="instr-badge ${bt.cls}">${bt.text}</div>`;
+  return item.instrumented
+    ? `<div class="instr-badge nr">${esc(item.instrumentationType||'instrumented')}</div>`
+    : `<div class="instr-badge none">No instrumentation signals</div>`;
+}
+
+function replicasBar(ready, total){
+  if (total == null) return '';
+  const pct = total > 0 ? Math.round((ready/total)*100) : 0;
+  const cls = pct === 100 ? 'full' : pct > 0 ? 'partial' : 'zero';
+  return `<div class="replicas-bar">
+    <div class="replicas-label"><span>Replicas</span><span>${ready}/${total} ready</span></div>
+    <div class="replicas-track"><div class="replicas-fill ${cls}" style="width:${pct}%"></div></div>
+  </div>`;
+}
+
+function signalBox(item){
+  if (!item.instrumented) return '';
+  const v = item.variables || {};
+  const anns = Object.entries(v)
+    .filter(([k]) => k.startsWith('annotation.') && !k.includes('kubectl.kubernetes.io'))
+    .map(([k,val]) => {
+      const key = k.replace('annotation.','');
+      const v2 = String(val).length > 70 ? String(val).slice(0,70)+'…' : String(val);
+      return `<span class="key">${esc(key)}</span> <span class="val">${esc(v2)}</span>`;
+    });
+  return anns.length ? `<div class="signal-box">${anns.join('<br>')}</div>` : '';
+}
+
+function cardBody_service(item){
+  const v = item.variables || {};
+  const ports = (v.ports || []);
+  const portTags = Array.isArray(ports)
+    ? ports.map(p => `<span class="port-tag">${esc(p.name||'')} :${p.port}</span>`).join('')
+    : '';
+  return `
+    ${instrBadge(item)}
+    <div class="detail-grid">
+      <div><div class="detail-label">Namespace</div><div class="detail-value">${esc(v.namespace)}</div></div>
+      <div><div class="detail-label">Type</div><div class="detail-value">${esc(v.serviceType)}</div></div>
+      <div><div class="detail-label">ClusterIP</div><div class="detail-value">${esc(v.clusterIP)}</div></div>
+      <div><div class="detail-label">Cluster</div><div class="detail-value">${esc(v.clusterName)}</div></div>
+    </div>
+    ${portTags ? `<div class="ports">${portTags}</div>` : ''}
+    ${signalBox(item)}`;
+}
+
+function cardBody_workload(item){
+  const v = item.variables || {};
+  const images = v.images ? v.images.split(',') : [];
+  const firstImage = images[0] || '';
+  return `
+    ${instrBadge(item)}
+    <div class="detail-grid">
+      <div><div class="detail-label">Namespace</div><div class="detail-value">${esc(v.namespace)}</div></div>
+      <div><div class="detail-label">Cluster</div><div class="detail-value">${esc(v.clusterName)}</div></div>
+      <div style="grid-column:span 2"><div class="detail-label">Image</div>
+        <div class="detail-value">${esc(firstImage)}</div></div>
+    </div>
+    ${replicasBar(v.readyReplicas, v.replicas)}
+    ${signalBox(item)}`;
+}
+
+function cardBody_pvc(item){
+  const v = item.variables || {};
+  const statusCls = v.pvcStatus || 'Pending';
+  return `
+    <div class="pvc-status ${statusCls}">
+      <div class="dot" style="width:5px;height:5px;border-radius:50%;background:currentColor"></div>
+      ${esc(statusCls)}
+    </div>
+    <div class="detail-grid">
+      <div><div class="detail-label">Namespace</div><div class="detail-value">${esc(v.namespace)}</div></div>
+      <div><div class="detail-label">Capacity</div><div class="detail-value">${esc(v.capacity||'—')}</div></div>
+      <div><div class="detail-label">Storage Class</div><div class="detail-value">${esc(v.storageClass||'—')}</div></div>
+      <div><div class="detail-label">Access Modes</div><div class="detail-value">${esc(v.accessModes||'—')}</div></div>
+      <div style="grid-column:span 2"><div class="detail-label">Volume</div>
+        <div class="detail-value">${esc(v.volumeName||'—')}</div></div>
+    </div>`;
+}
+
+function cardBody_crd(item){
+  const v = item.variables || {};
+  return `
+    <div class="detail-grid">
+      <div><div class="detail-label">Group</div><div class="detail-value">${esc(v.crdGroup)}</div></div>
+      <div><div class="detail-label">Version</div><div class="detail-value">${esc(v.crdVersion)}</div></div>
+      <div><div class="detail-label">Scope</div><div class="detail-value">${esc(v.crdScope)}</div></div>
+      <div><div class="detail-label">Cluster</div><div class="detail-value">${esc(v.clusterName)}</div></div>
+    </div>`;
+}
+
+function renderCard(item){
+  const k = resourceKind(item);
+  const meta = KIND_META[k] || { icon:'❓', bg:'#ffffff08', hasInstr:false };
+  const name = resourceName(item);
+  const ns = item.variables?.namespace || '';
+
+  const hasInstr = meta.hasInstr;
+  const instrumented = item.instrumented;
+  const borderCls = !hasInstr ? 'neutral' : instrumented ? 'instrumented' : 'uninstrumented';
+
+  let statusPill = '';
+  if (hasInstr) {
+    statusPill = instrumented
+      ? `<div class="status-pill ok"><div class="dot"></div>Instrumented</div>`
+      : `<div class="status-pill missing"><div class="dot"></div>Not Instrumented</div>`;
+  } else {
+    statusPill = `<div class="status-pill neutral">N/A</div>`;
+  }
+
+  let body = '';
+  switch(k){
+    case 'Deployment': case 'StatefulSet': case 'DaemonSet': case 'Pod':
+      body = cardBody_workload(item); break;
+    case 'PersistentVolumeClaim': body = cardBody_pvc(item); break;
+    case 'CustomResourceDefinition': body = cardBody_crd(item); break;
+    default: body = cardBody_service(item);
+  }
+
+  return `
+<div class="card ${borderCls}" data-kind="${esc(k)}" data-ns="${esc(ns)}">
+  <div class="card-header">
+    <div class="service-icon" style="background:${meta.bg}">${meta.icon}</div>
+    <div class="service-info">
+      <div class="service-name">${esc(name)}</div>
+      <div class="service-meta">${esc(ns ? ns+'  ·  '+meta.label : meta.label)}</div>
+    </div>
+    ${statusPill}
+  </div>
+  <div class="card-body">
+    <span class="kind-tag ${esc(k.replace('PersistentVolumeClaim','PVC').replace('CustomResourceDefinition','CRD'))}">${esc(meta.label)}</span>
+    ${body}
+  </div>
+</div>`;
+}
+
+// ── filter & display ──────────────────────────────────────────────────────────
+
+function applyFilters(){
+  activeNs = document.getElementById('ns-select').value;
+  let items = allItems;
+  if (activeKind !== 'all') items = items.filter(i => resourceKind(i) === activeKind);
+  if (activeNs)             items = items.filter(i => (i.variables?.namespace || '') === activeNs);
+
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('empty-state');
+  if (!items.length){
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    document.getElementById('empty-msg').textContent = 'No resources match the current filter.';
+  } else {
+    empty.style.display = 'none';
+    grid.innerHTML = items.map(renderCard).join('');
+  }
+}
+
+function buildTabs(items){
+  const kindCounts = {};
+  for (const item of items){
+    const k = resourceKind(item);
+    kindCounts[k] = (kindCounts[k]||0) + 1;
+  }
+  const total = items.length;
+
+  const tabs = [{ kind:'all', label:`All (${total})` }];
+  for (const [k, meta] of Object.entries(KIND_META)){
+    if (kindCounts[k]){
+      tabs.push({ kind:k, label:`${meta.label} (${kindCounts[k]})` });
+    }
+  }
+
+  const container = document.getElementById('tabs');
+  container.innerHTML = tabs.map(t =>
+    `<button class="tab${t.kind===activeKind?' active':''}" onclick="setTab('${t.kind}')">${esc(t.label)}</button>`
+  ).join('');
+}
+
+function setTab(k){
+  activeKind = k;
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.textContent.startsWith(k==='all'?'All':KIND_META[k]?.label)));
+  applyFilters();
+}
+
+function buildNsDropdown(items){
+  const nsList = uniqueNamespaces(items);
+  const sel = document.getElementById('ns-select');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">All</option>' +
+    nsList.map(ns => `<option value="${esc(ns)}"${ns===current?' selected':''}>${esc(ns)}</option>`).join('');
+}
+
+// ── summary ───────────────────────────────────────────────────────────────────
+
+function updateSummary(items){
+  const instrumented   = items.filter(i => i.instrumented && KIND_META[resourceKind(i)]?.hasInstr);
+  const uninstrumented = items.filter(i => !i.instrumented && KIND_META[resourceKind(i)]?.hasInstr);
+  const kindSet = new Set(items.map(i => resourceKind(i)));
+
+  document.getElementById('stat-total').textContent   = items.length;
+  document.getElementById('stat-ok').textContent      = instrumented.length;
+  document.getElementById('stat-missing').textContent = uninstrumented.length;
+  document.getElementById('stat-kinds').textContent   = kindSet.size;
+
+  document.getElementById('stat-kinds-sub').textContent   = items.length === 1 ? '1 resource' : `${items.length} resources`;
+  document.getElementById('stat-ok-sub').textContent      = [...new Set(instrumented.map(i=>resourceName(i)))].slice(0,3).join(' · ') || '—';
+  document.getElementById('stat-missing-sub').textContent = [...new Set(uninstrumented.map(i=>resourceName(i)))].slice(0,4).join(' · ') || '—';
+  document.getElementById('stat-kinds2-sub').textContent  = [...kindSet].map(k=>KIND_META[k]?.label||k).join(', ');
+
+  // cluster name
+  const cn = items[0]?.variables?.clusterName;
+  if (cn) document.getElementById('cluster-name').textContent = cn;
+}
+
+// ── fetch ─────────────────────────────────────────────────────────────────────
+
+let progressTimer;
+const INTERVAL = 30_000;
+
+function startProgress(){
+  const fill = document.getElementById('progress-fill');
+  fill.style.transition = 'none'; fill.style.width = '0%';
+  void fill.offsetWidth;
+  fill.style.transition = `width ${INTERVAL}ms linear`; fill.style.width = '100%';
+}
+
+async function fetchNow(){
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('loading');
+  clearTimeout(progressTimer);
+  startProgress();
+  try {
+    const res  = await fetch('/api/services');
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : (data.items || []);
+    allItems = list;
+    updateSummary(list);
+    buildTabs(list);
+    buildNsDropdown(list);
+    applyFilters();
+    document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+  } catch(e){
+    document.getElementById('empty-state').style.display = 'block';
+    document.getElementById('empty-msg').textContent = 'Error: ' + e.message;
+  } finally {
+    btn.classList.remove('loading');
+    progressTimer = setTimeout(fetchNow, INTERVAL);
+  }
+}
+
+fetchNow();
+</script>
+</body>
+</html>

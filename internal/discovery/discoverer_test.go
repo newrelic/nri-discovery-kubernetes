@@ -282,6 +282,7 @@ func items() map[string]DiscoveredItem {
 				name:                      "test",
 				id:                        "testID",
 				image:                     "testImage",
+				instrumented:              false,
 				labelPrefix + "team":      "caos",
 				annotationPrefix + "test": "test",
 			},
@@ -292,6 +293,7 @@ func items() map[string]DiscoveredItem {
 				podName:              "test",
 				name:                 "test",
 				image:                "testImage",
+				instrumented:         false,
 				labelPrefix + "team": "caos",
 			},
 			EntityRewrites: []Replacement{
@@ -301,6 +303,8 @@ func items() map[string]DiscoveredItem {
 					ReplaceField: "k8s:${clusterName}:${namespace}:pod:${podName}:${name}",
 				},
 			},
+			Instrumented:        false,
+			InstrumentationType: "",
 		},
 		"fake": {
 			Variables: VariablesMap{
@@ -314,6 +318,7 @@ func items() map[string]DiscoveredItem {
 				name:                      "fake",
 				id:                        "fakeID",
 				image:                     "fakeImage",
+				instrumented:              false,
 				labelPrefix + "team":      "caos",
 				annotationPrefix + "fake": "fake",
 			},
@@ -324,6 +329,7 @@ func items() map[string]DiscoveredItem {
 				podName:              "fake",
 				name:                 "fake",
 				image:                "fakeImage",
+				instrumented:         false,
 				labelPrefix + "team": "caos",
 			},
 			EntityRewrites: []Replacement{
@@ -333,6 +339,8 @@ func items() map[string]DiscoveredItem {
 					ReplaceField: "k8s:${clusterName}:${namespace}:pod:${podName}:${name}",
 				},
 			},
+			Instrumented:        false,
+			InstrumentationType: "",
 		},
 	}
 

@@ -23,7 +23,7 @@ local_resource('Discovery binary', 'GOOS=linux make compile', deps=[
 
 # Use custom Dockerfile for Tilt builds, which only takes locally built daemon binary for live reloading.
 dockerfile = '''
-FROM golang:1.17-alpine AS dlv-builder
+FROM golang:1.26.6-alpine AS dlv-builder
 
 RUN apk add gcc musl-dev && \
     go install github.com/go-delve/delve/cmd/dlv@latest
@@ -66,4 +66,19 @@ k8s_yaml(
 k8s_resource(
     "discovery-devenv",
     port_forwards = "2345:2345"
+)
+
+# ── Live demo dashboard ────────────────────────────────────────────────────────
+# Builds a native macOS binary for local use, then starts a Python HTTP server
+# that re-runs discovery on every page load. Auto-refreshes every 30 s.
+local_resource(
+    'demo-dashboard',
+    serve_cmd = 'CLUSTER_NAME=minikube DEMO_PORT=8765 python3 deploy/demo/server.py',
+    readiness_probe = probe(
+        http_get = http_get_action(8765, path='/health'),
+        period_secs = 3,
+    ),
+    deps   = ['deploy/demo/server.py', 'deploy/demo/demo-results.html'],
+    labels = ['demo'],
+    links  = [link('http://localhost:8765', 'Demo Dashboard')],
 )
