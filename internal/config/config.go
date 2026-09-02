@@ -15,17 +15,31 @@ const (
 	DefaultTimeout = 5000        // Default timeout of 5 seconds in miliseconds
 	DefaultRetries = 5           // Default retries to 5
 
-	FlagHost              = "host"
-	FlagNamespaces        = "namespaces"
-	FlagPort              = "port"
-	FlagInsecure          = "insecure"
-	FlagTimeout           = "timeout"
-	FlagRetries           = "retries"
-	FlagTLS               = "tls"
-	FlagKubeConfigFile    = "kubeconfig"
-	FlagClusterName       = "cluster_name"
-	FlagNodeName          = "node_name"
-	FlagDiscoverServices  = "discover-services"
+	FlagHost             = "host"
+	FlagNamespaces       = "namespaces"
+	FlagPort             = "port"
+	FlagInsecure         = "insecure"
+	FlagTimeout          = "timeout"
+	FlagRetries          = "retries"
+	FlagTLS              = "tls"
+	FlagKubeConfigFile   = "kubeconfig"
+	FlagClusterName      = "cluster_name"
+	FlagNodeName         = "node_name"
+	FlagDiscoverServices = "discover-services"
+	FlagWatch            = "watch"
+	FlagWatchInterval    = "watch-interval"
+	FlagResources        = "resources"
+
+	DefaultWatchInterval = 15
+
+	// Resource type constants used in --resources flag.
+	ResourcePods         = "pods"
+	ResourceServices     = "services"
+	ResourceDeployments  = "deployments"
+	ResourceStatefulSets = "statefulsets"
+	ResourceDaemonSets   = "daemonsets"
+	ResourcePVCs         = "pvcs"
+	ResourceCRDs         = "crds"
 
 	envPrefix            = "NRIA"
 	nodeNameEnvVar       = "NRI_KUBERNETES_NODE_NAME"
@@ -50,6 +64,10 @@ For backwards compatibility this flag takes precedence over 'tls')`)
 
 	_ = flag.String(FlagKubeConfigFile, "", "(optional) Kubeconfig to use to connecto to kubelet")
 	_ = flag.Bool(FlagDiscoverServices, false, "(optional, default false) Discover Kubernetes services instead of just pods")
+	_ = flag.Bool(FlagWatch, false, "(optional, default false) Run in watch mode: continuously poll and output discovered items")
+	_ = flag.Int(FlagWatchInterval, DefaultWatchInterval, "(optional, default 15) Seconds between discovery runs in watch mode")
+	_ = flag.String(FlagResources, "", "(optional) Comma-separated list of resource types to discover: "+
+		"pods,services,deployments,statefulsets,daemonsets,pvcs,crds")
 
 	ErrClusterNameNotSet = errors.New("cluster name is not set")
 )
@@ -66,6 +84,21 @@ type Config struct {
 	ClusterName      string
 	NodeName         string
 	DiscoverServices bool
+	Watch            bool
+	WatchInterval    int
+	// Resources is the explicit list of resource types to discover.
+	// When non-empty it takes precedence over DiscoverServices.
+	Resources        []string
+}
+
+// HasResource returns true if the given resource type is enabled.
+func (c *Config) HasResource(r string) bool {
+	for _, res := range c.Resources {
+		if res == r {
+			return true
+		}
+	}
+	return false
 }
 
 func splitStrings(str string) []string {
@@ -103,6 +136,9 @@ func NewConfig(version string) (*Config, error) {
 	_ = v.BindPFlag(FlagClusterName, flag.Lookup(FlagClusterName))
 	_ = v.BindPFlag(FlagNodeName, flag.Lookup(FlagNodeName))
 	_ = v.BindPFlag(FlagDiscoverServices, flag.Lookup(FlagDiscoverServices))
+	_ = v.BindPFlag(FlagWatch, flag.Lookup(FlagWatch))
+	_ = v.BindPFlag(FlagWatchInterval, flag.Lookup(FlagWatchInterval))
+	_ = v.BindPFlag(FlagResources, flag.Lookup(FlagResources))
 
 	v.SetEnvPrefix(envPrefix)
 	v.AutomaticEnv()
@@ -114,6 +150,9 @@ func NewConfig(version string) (*Config, error) {
 		Timeout:          v.GetInt(FlagTimeout),
 		Retries:          v.GetInt(FlagRetries),
 		DiscoverServices: v.GetBool(FlagDiscoverServices),
+		Watch:            v.GetBool(FlagWatch),
+		WatchInterval:    v.GetInt(FlagWatchInterval),
+		Resources:        splitStrings(v.GetString(FlagResources)),
 	}
 
 	// To leave the variable empty as nil

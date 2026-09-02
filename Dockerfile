@@ -1,14 +1,11 @@
-
-FROM golang:1.26.6-bookworm AS build
-RUN apk add --no-cache --update git make
+FROM golang:1.26.6-alpine AS build
+RUN apk add --no-cache --update git
 
 WORKDIR /go/src/github.com/newrelic/nri-discovery-kubernetes
-# cache dependencies
-COPY go.mod go.sum Makefile ./
-RUN make deps
+COPY go.mod go.sum ./
+RUN go mod download
 COPY . .
-RUN make compile-only
-RUN chmod +x ./bin/nri-discovery-kubernetes
+RUN CGO_ENABLED=0 go build -o bin/nri-discovery-kubernetes ./cmd/discovery/
 
 FROM alpine:latest
 RUN apk add --no-cache ca-certificates

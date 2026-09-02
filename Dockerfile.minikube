@@ -1,0 +1,7 @@
+# Dev image for minikube: expects context=./bin, so paths are relative to that dir.
+# Avoids pulling the golang base image from Docker Hub entirely.
+FROM alpine:latest
+RUN apk add --no-cache ca-certificates
+USER nobody
+COPY nri-discovery-kubernetes-linux /bin/nri-discovery-kubernetes
+ENTRYPOINT ["/bin/nri-discovery-kubernetes"]

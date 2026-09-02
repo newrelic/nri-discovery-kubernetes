@@ -1,0 +1,64 @@
+---
+# Redis — INSTRUMENTED via OpenTelemetry auto-instrumentation operator annotation.
+# The instrumentation.opentelemetry.io annotation triggers the OTel operator to inject
+# the collector sidecar and configure trace/metric export.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: demo-services
+  labels:
+    app: redis
+    service-type: cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+        service-type: cache
+      annotations:
+        instrumentation.opentelemetry.io/inject-sdk: "true"
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9121"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: redis
+          image: redis:7.2-alpine
+          ports:
+            - name: redis
+              containerPort: 6379
+          args: ["--save", "60", "1", "--loglevel", "warning"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: demo-services
+  labels:
+    app: redis
+    service-type: cache
+  annotations:
+    instrumentation.opentelemetry.io/inject-sdk: "true"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9121"
+spec:
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
+  type: ClusterIP

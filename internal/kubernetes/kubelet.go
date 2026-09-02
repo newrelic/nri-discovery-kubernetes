@@ -5,11 +5,21 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/newrelic/nri-discovery-kubernetes/internal/config"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/http"
 	"github.com/newrelic/nri-discovery-kubernetes/internal/utils"
 	corev1 "k8s.io/api/core/v1"
+)
+
+// Instrumentation type constants for discovered items.
+const (
+	InstrumentationNone        = ""
+	InstrumentationNRAPM       = "newrelic-apm"
+	InstrumentationNROnHost    = "newrelic-integration"
+	InstrumentationOTel        = "opentelemetry"
+	InstrumentationPrometheus  = "prometheus"
 )
 
 const (
@@ -27,19 +37,21 @@ type (
 
 // ContainerInfo represents discovery-specific format for found Pods via Kubelet API.
 type ContainerInfo struct {
-	Name           string
-	ID             string
-	Image          string
-	ImageID        string
-	Ports          PortsMap
-	PodLabels      LabelsMap
-	PodAnnotations AnnotationsMap
-	PodIP          string
-	PodName        string
-	NodeName       string
-	NodeIP         string
-	Namespace      string
-	Cluster        string
+	Name                string
+	ID                  string
+	Image               string
+	ImageID             string
+	Ports               PortsMap
+	PodLabels           LabelsMap
+	PodAnnotations      AnnotationsMap
+	PodIP               string
+	PodName             string
+	NodeName            string
+	NodeIP              string
+	Namespace           string
+	Cluster             string
+	Instrumented        bool
+	InstrumentationType string
 }
 
 // Kubelet defines what functionality kubelet client provides.
@@ -107,6 +119,8 @@ func getContainers(clusterName string, nodeName string, pods []corev1.Pod) []Con
 			continue
 		}
 
+		instrumented, instrType := detectPodInstrumentation(pod)
+
 		for idx, cs := range pod.Status.ContainerStatuses {
 			if cs.State.Running == nil {
 				continue
@@ -114,24 +128,54 @@ func getContainers(clusterName string, nodeName string, pods []corev1.Pod) []Con
 
 			ports := getPorts(pod, idx)
 			c := ContainerInfo{
-				Name:           cs.Name,
-				ID:             cs.ContainerID,
-				Image:          cs.Image,
-				ImageID:        cs.ImageID,
-				Ports:          ports,
-				PodIP:          pod.Status.PodIP,
-				PodLabels:      pod.Labels,
-				PodAnnotations: pod.Annotations,
-				PodName:        pod.Name,
-				NodeName:       nodeName,
-				NodeIP:         pod.Status.HostIP,
-				Namespace:      pod.Namespace,
-				Cluster:        clusterName,
+				Name:                cs.Name,
+				ID:                  cs.ContainerID,
+				Image:               cs.Image,
+				ImageID:             cs.ImageID,
+				Ports:               ports,
+				PodIP:               pod.Status.PodIP,
+				PodLabels:           pod.Labels,
+				PodAnnotations:      pod.Annotations,
+				PodName:             pod.Name,
+				NodeName:            nodeName,
+				NodeIP:              pod.Status.HostIP,
+				Namespace:           pod.Namespace,
+				Cluster:             clusterName,
+				Instrumented:        instrumented,
+				InstrumentationType: instrType,
 			}
 			containers = append(containers, c)
 		}
 	}
 	return containers
+}
+
+// detectPodInstrumentation checks pod annotations and container env vars to determine
+// whether the pod is instrumented with New Relic or OpenTelemetry.
+func detectPodInstrumentation(pod corev1.Pod) (bool, string) {
+	// Check pod annotations for OTel auto-instrumentation operator
+	for k := range pod.Annotations {
+		if strings.HasPrefix(k, "instrumentation.opentelemetry.io/") {
+			return true, InstrumentationOTel
+		}
+		if k == "newrelic.com/integrations-config" {
+			return true, InstrumentationNROnHost
+		}
+	}
+
+	// Check container env var names for NR APM or OTel SDK configuration
+	for _, container := range pod.Spec.Containers {
+		for _, env := range container.Env {
+			switch env.Name {
+			case "NEW_RELIC_LICENSE_KEY", "NEW_RELIC_APP_NAME":
+				return true, InstrumentationNRAPM
+			case "OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_SERVICE_NAME":
+				return true, InstrumentationOTel
+			}
+		}
+	}
+
+	return false, InstrumentationNone
 }
 
 func getPorts(pod corev1.Pod, containerIndex int) PortsMap {

@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: newrelic
+  namespace: default
+automountServiceAccountToken: true
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo-services
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: newrelic
+rules:
+  - apiGroups: [""]
+    resources:
+      - "nodes"
+      - "nodes/metrics"
+      - "nodes/stats"
+      - "nodes/proxy"
+      - "pods"
+      - "services"
+      - "namespaces"
+      - "persistentvolumeclaims"
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources:
+      - "deployments"
+      - "statefulsets"
+      - "daemonsets"
+    verbs: ["get", "list"]
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources:
+      - "customresourcedefinitions"
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: newrelic
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: newrelic
+subjects:
+  - kind: ServiceAccount
+    name: newrelic
+    namespace: default
+---
+# Continuous watch: polls all services every 15s, prints JSON with instrumentation status.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nri-discovery-kubernetes
+  namespace: default
+  labels:
+    app: nri-discovery-kubernetes
+    team: caos
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nri-discovery-kubernetes
+  template:
+    metadata:
+      labels:
+        app: nri-discovery-kubernetes
+        team: caos
+        env: demo
+    spec:
+      serviceAccountName: newrelic
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: nri-discovery-kubernetes
+          image: newrelic/nri-discovery-kubernetes:dev
+          imagePullPolicy: Never
+          args:
+            - "--discover-services"
+            - "--watch"
+            - "--watch-interval=15"
+          securityContext:
+            privileged: true
+          env:
+            - name: CLUSTER_NAME
+              value: ramk-demo-nri-k8s-discovery
+            - name: "NRK8S_NODE_NAME"
+              valueFrom:
+                fieldRef:
+                  apiVersion: "v1"
+                  fieldPath: "spec.nodeName"
