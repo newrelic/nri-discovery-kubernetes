@@ -1,6 +1,6 @@
 module github.com/newrelic/nri-discovery-kubernetes
 
-go 1.27.1
+go 1.27.2
 
 require (
 	github.com/sethgrid/pester v1.2.0
