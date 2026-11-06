@@ -8,6 +8,10 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+### security
+- Updated github.com/pelletier/go-toml/v2 to v2.4.3 to address GHSA-frc4-6h9q-39fq
+- Updated golang.org/x/net to v0.62.0 to address GO-2026-6860 and GO-2026-6866
+
 ## v1.15.5 - 2026-10-29
 
 ### ⛓️ Dependencies
